@@ -444,7 +444,7 @@ function refGuardar(c) {
 }
 function refMostrar(c) {
   if (!c) return;
-  api("ref", { c: c }).then(function (r) {
+  api("ref", { codigo: c }).then(function (r) {
     if (!r || r.error || !r.nombre) { if (r && r.error) guardarLocal("st25_ref", null); return; }
     var b = document.getElementById("refBanner");
     if (b) { b.innerHTML = "👋 Te recomendó <b>" + esc(r.nombre) + "</b>. ¡Bienvenido a Street25!"; b.style.display = ""; }
