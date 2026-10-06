@@ -431,19 +431,26 @@ function cargar() {
   });
 }
 
+// Imagen de cada plataforma: 1) enlace en la columna G del Catálogo, 2) imagen de tu catálogo de WhatsApp, 3) se busca sola en internet por el dominio
+var DOMINIO_PLAT = { netflix: "netflix.com", disney: "disneyplus.com", amazon: "primevideo.com", prime: "primevideo.com", hbo: "max.com", max: "max.com",
+  paramount: "paramountplus.com", youtube: "youtube.com", spotify: "spotify.com", plex: "plex.tv", crunchyroll: "crunchyroll.com", viki: "viki.com",
+  vix: "vix.com", star: "starplus.com", apple: "tv.apple.com", appletv: "tv.apple.com", deezer: "deezer.com", tidal: "tidal.com", canva: "canva.com",
+  directv: "directvgo.com", directvgo: "directvgo.com", mubi: "mubi.com", pluto: "pluto.tv", universal: "universalplus.com", win: "winsports.co" };
+var IMG_URL = {};
+function clavePlat(p) { return String(p || "").toLowerCase().split(/\s+/)[0].replace(/[^a-z0-9]/g, ""); }
 function imgPlat(p) {
-  var k = String(p || "").toLowerCase().split(/\s+/)[0];
-  return (typeof IMG_PLAT !== "undefined" && IMG_PLAT[k]) || "";
+  var k = clavePlat(p);
+  if (!k) return "";
+  if (IMG_URL[k]) return IMG_URL[k];
+  if (typeof IMG_PLAT !== "undefined" && IMG_PLAT[k]) return IMG_PLAT[k];
+  return "https://icon.horse/icon/" + (DOMINIO_PLAT[k] || k + ".com");
+}
+function imgTag(src, alt) {
+  return '<img src="' + esc(src) + '" alt="' + esc(alt || "") + '" loading="lazy" onerror="this.onerror=null;this.style.visibility=\'hidden\'">';
 }
 function badgeHtml(it) {
-  if (it.combo) {
-    var ims = it.componentes.map(function (k) { return imgPlat(k.plataforma); });
-    if (ims.every(Boolean)) return '<div class="stack">' + ims.map(function (s) { return '<img src="' + s + '" alt="">'; }).join("") + '</div>';
-    return '<div class="badge">' + it.componentes.length + '×</div>';
-  }
-  var s = imgPlat(it.plataforma);
-  return s ? '<div class="badge img"><img src="' + s + '" alt="' + esc(it.plataforma) + '"></div>'
-    : '<div class="badge">' + esc(it.plataforma.charAt(0).toUpperCase()) + '</div>';
+  if (it.combo) return '<div class="stack">' + it.componentes.map(function (k) { return imgTag(imgPlat(k.plataforma), k.plataforma); }).join("") + '</div>';
+  return '<div class="badge img">' + imgTag(imgPlat(it.plataforma), it.plataforma) + '</div>';
 }
 
 // Enlaces directos: ?r=WhatsApp abre la renovación; ?c=WhatsApp&k=código abre la consulta
@@ -499,6 +506,7 @@ function compPlat(a, b) { return rangoPlat(a) - rangoPlat(b) || String(a).locale
 
 function pintarCatalogo() {
   var g = document.getElementById("grid");
+  CAT.items.forEach(function (x) { if (!x.combo && x.imagen) IMG_URL[clavePlat(x.plataforma)] = x.imagen; });
   if (!CAT.items.length) { g.innerHTML = '<p style="color:var(--mut)">Pronto tendremos perfiles disponibles.</p>'; return; }
   // Cada combo va en el grupo de su plataforma más importante (Netflix > Disney > Amazon > ...)
   var grupos = {};
