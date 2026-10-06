@@ -542,18 +542,30 @@ function cerrar(id) {
 function guardarLocal(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 function leerLocal(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
 
-function cargar() {
+function usarCatalogo(r) {
+  CAT = r;
+  document.getElementById("dias").textContent = r.dias || 30;
+  if (r.whatsapp) document.getElementById("footWa").innerHTML = '<a href="https://wa.me/' + esc(r.whatsapp) + '" target="_blank" rel="noopener">WhatsApp ' + esc(r.whatsapp.replace(/^57/, "")) + "</a>";
+  pintarCatalogo(); pintarPagos(); pintarPedirCodigo(); pintarAviso();
+  if (!TOP) cargarTop();
+}
+// Muestra al instante el último catálogo guardado en el teléfono y luego lo actualiza;
+// si el servidor falla, reintenta solo hasta 3 veces antes de mostrar el aviso.
+function cargar(intento) {
+  intento = intento || 0;
+  if (!intento && !CAT) {
+    var guardado = leerLocal("st25_cat", null);
+    if (guardado && guardado.items && guardado.items.length) { try { usarCatalogo(guardado); } catch (e) { CAT = null; } }
+  }
   api("catalogo").then(function (r) {
-    if (!r || r.error) throw new Error((r && r.error) || "Sin respuesta");
-    CAT = r;
-    document.getElementById("dias").textContent = r.dias || 30;
-    if (r.whatsapp) document.getElementById("footWa").innerHTML = '<a href="https://wa.me/' + esc(r.whatsapp) + '" target="_blank" rel="noopener">WhatsApp ' + esc(r.whatsapp.replace(/^57/, "")) + "</a>";
-    pintarCatalogo(); pintarPagos(); pintarPedirCodigo(); pintarAviso();
-    if (!TOP) cargarTop();
+    if (!r || r.error || !r.items) throw new Error((r && r.error) || "Sin respuesta");
+    guardarLocal("st25_cat", r);
+    usarCatalogo(r);
     if (!window._paramsHechos) { window._paramsHechos = true; aplicarParams(); }
   }).catch(function (e) {
-    document.getElementById("grid").innerHTML = '<p style="color:var(--mut)">No pudimos cargar el catálogo. Recarga la página en un momento.</p>';
     console.error(e);
+    if (intento < 3) { setTimeout(function () { cargar(intento + 1); }, 2500 * (intento + 1)); return; }
+    if (!CAT) document.getElementById("grid").innerHTML = '<p style="color:var(--mut)">No pudimos cargar el catálogo. <button class="ghost" onclick="cargar(1)">Reintentar</button></p>';
   });
 }
 
@@ -635,12 +647,14 @@ function pintarAviso() {
 
 // ---- Banner Top 5 (datos de TMDB) ----
 var TOP = null, TOP_I = 0, TOP_TIMER = null;
-function cargarTop() {
+function cargarTop(intento) {
+  intento = intento || 0;
   api("top").then(function (r) {
-    if (!r || r.error || !r.plats || !r.plats.length) return;
+    if (!r || r.error || !r.plats || !r.plats.length) throw new Error("sin top");
     TOP = r; TOP_I = 0; pintarTop();
+    if (TOP_TIMER) clearInterval(TOP_TIMER);
     TOP_TIMER = setInterval(function () { TOP_I = (TOP_I + 1) % TOP.plats.length; pintarTop(); }, 8000);
-  }).catch(function () {});
+  }).catch(function () { if (intento < 2) setTimeout(function () { cargarTop(intento + 1); }, 4000 * (intento + 1)); });
 }
 function topElegir(i) { TOP_I = i; if (TOP_TIMER) { clearInterval(TOP_TIMER); TOP_TIMER = null; } pintarTop(); }
 function topDesde(clave) {
