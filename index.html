@@ -259,6 +259,7 @@
       <a class="cta" href="#catalogo" onclick="return irA('catalogo')" style="text-decoration:none">Comprar perfiles</a>
       <a class="ghost" href="#renovar" onclick="return irA('renovar')">🔄 Renovar mi perfil</a>
       <a class="ghost" href="#consultar" onclick="return irA('consultar')">🔑 Consultar mi cuenta</a>
+      <a class="ghost" id="btnSoporte" href="https://wa.me/573044430163?text=Hola%2C%20necesito%20ayuda%20con%20Street25" target="_blank" rel="noopener">💬 Chatear con soporte</a>
     </div>
   </section>
 
@@ -588,6 +589,8 @@ function mediaHtml(it) {
 }
 function normTxt(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim(); }
 function pintarAviso() {
+  var bs = document.getElementById("btnSoporte");
+  if (bs && CAT.whatsapp) bs.href = "https://wa.me/" + CAT.whatsapp + "?text=" + encodeURIComponent("Hola, necesito ayuda con Street25");
   var wa = String(CAT.whatsapp || "").replace(/^57/, "");
   var waFmt = wa.replace(/^(\d{3})(\d{3})(\d{4})$/, "$1 $2 $3");
   var pagos = (CAT.pagos || []).map(function (p) {
@@ -595,7 +598,7 @@ function pintarAviso() {
   }).join(" o ");
   document.getElementById("aviso").innerHTML = '<div class="avi">⚠️</div><div><b class="avt">¡Cuidado con las estafas!</b><p>' +
     (wa ? 'Nuestro <b>único WhatsApp oficial</b> es <a href="https://wa.me/' + esc(CAT.whatsapp) + '" target="_blank" rel="noopener">' + esc(waFmt) + '</a>. ' : '') +
-    (pagos ? 'Solo recibimos pagos por ' + pagos + '. ' : '') +
+    'Los canales de pago oficiales se te indican dentro del proceso de compra. ' +
     'Nunca te pediremos claves, códigos de verificación ni pagos a otros números. Si alguien te escribe desde otro número diciendo ser Street25, no le pagues y avísanos.</p></div>';
 }
 
@@ -869,7 +872,7 @@ function abrirMisPedidos() {
 function demo(accion, d) {
   return new Promise(function (res) {
     setTimeout(function () {
-      if (accion === "catalogo") res({ negocio: "Street25", dias: 30, whatsapp: "573004906672", pagos: [], items: [] });
+      if (accion === "catalogo") res({ negocio: "Street25", dias: 30, whatsapp: "573044430163", pagos: [], items: [] });
       else res({ error: "Modo demo" });
     }, 300);
   });
