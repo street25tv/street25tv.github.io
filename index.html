@@ -564,7 +564,7 @@ function cargar(intento) {
     if (!window._paramsHechos) { window._paramsHechos = true; aplicarParams(); }
   }).catch(function (e) {
     console.error(e);
-    if (intento < 3) { setTimeout(function () { cargar(intento + 1); }, 2500 * (intento + 1)); return; }
+    if (intento < 5) { setTimeout(function () { cargar(intento + 1); }, 2500 * (intento + 1)); return; }
     if (!CAT) document.getElementById("grid").innerHTML = '<p style="color:var(--mut)">No pudimos cargar el catálogo. <button class="ghost" onclick="cargar(1)">Reintentar</button></p>';
   });
 }
@@ -654,7 +654,7 @@ function cargarTop(intento) {
     TOP = r; TOP_I = 0; pintarTop();
     if (TOP_TIMER) clearInterval(TOP_TIMER);
     TOP_TIMER = setInterval(function () { TOP_I = (TOP_I + 1) % TOP.plats.length; pintarTop(); }, 8000);
-  }).catch(function () { if (intento < 2) setTimeout(function () { cargarTop(intento + 1); }, 4000 * (intento + 1)); });
+  }).catch(function () { if (intento < 4) setTimeout(function () { cargarTop(intento + 1); }, 4000 * (intento + 1)); });
 }
 function topElegir(i) { TOP_I = i; if (TOP_TIMER) { clearInterval(TOP_TIMER); TOP_TIMER = null; } pintarTop(); }
 function topDesde(clave) {
