@@ -262,6 +262,16 @@
   .trank{font-size:48px;top:calc(100% - 78px);left:-12px}
   .tfoot .cta{width:100%;text-align:center}
 }
+/* ---- v10: accesos rápidos arriba (pestañas) ---- */
+.accesos{margin:18px 0 6px;scroll-margin-top:72px}
+.acTabs{display:flex;gap:8px;margin-bottom:10px}
+.acTab{flex:1 1 0;background:var(--card);color:var(--mut);border:1px solid var(--line);padding:12px 14px;border-radius:12px;font:inherit;font-weight:600;font-size:14px;cursor:pointer;line-height:1.2}
+.acTab.on{color:#fff;background:linear-gradient(90deg,var(--acc),var(--acc2));border-color:transparent}
+.acPanel{display:none}
+.acPanel.on{display:block}
+.accesos .renbox{margin:0}
+.accesos .how{margin:0}
+@media(max-width:560px){.acTab{padding:10px 6px;font-size:12.5px}}
 </style>
 </head>
 <body>
@@ -274,6 +284,39 @@
 </header>
 
 <main class="wrap">
+  <section class="accesos" id="accesos">
+    <div class="acTabs">
+      <button class="acTab on" id="tab-renovar" onclick="acTab('renovar')">🔄 Renovar mi perfil</button>
+      <button class="acTab" id="tab-consultar" onclick="acTab('consultar')">🔑 Consultar mi cuenta</button>
+      <button class="acTab" id="tab-como" onclick="acTab('como')">❓ ¿Cómo funciona?</button>
+    </div>
+    <div class="renbox acPanel on" id="renovar">
+    <p>¿Ya eres cliente? Escribe el WhatsApp con el que compraste y renueva tus perfiles por 30 días más.</p>
+    <div class="rensearch">
+      <input type="tel" id="renWa" placeholder="Ej: 3001234567" maxlength="13" inputmode="numeric" onkeydown="if(event.key==='Enter')buscarPerfiles()">
+      <button class="cta" id="btnBuscar" onclick="buscarPerfiles()">Buscar</button>
+    </div>
+    <div id="renLista"></div>
+    </div>
+    <div class="renbox acPanel" id="consultar">
+    <p>Pídenos tu código de consulta por WhatsApp y escríbelo aquí con tu número para ver los datos de tus perfiles (correo, clave, PIN y vencimiento).</p>
+    <div class="rensearch cqform">
+      <input type="tel" id="cqWa" placeholder="Tu WhatsApp" maxlength="13" inputmode="numeric">
+      <input type="tel" id="cqCod" class="cod" placeholder="Código" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')consultarCuenta()">
+      <button class="cta" id="btnCq" onclick="consultarCuenta()">Ver</button>
+    </div>
+    <p class="order" style="margin-top:10px" id="cqPedir"></p>
+    <div id="cqRes"></div>
+    </div>
+    <div class="renbox acPanel" id="como">
+    <div class="how">
+    <div class="step"><b>1. Elige</b><p>Agrega al carrito los perfiles que quieras.</p></div>
+    <div class="step"><b>2. Paga</b><p>Transfiere el total por Nequi o DaviPlata y sube la captura.</p></div>
+    <div class="step"><b>3. Recibe</b><p>Cuando confirmemos el pago, tus accesos aparecen aquí mismo.</p></div>
+  </div>
+    </div>
+  </section>
+
   <section id="top5"></section>
 
   <section class="hero">
@@ -287,8 +330,6 @@
     </div>
     <div class="heroBtns">
       <a class="cta" href="#catalogo" onclick="return irA('catalogo')" style="text-decoration:none">Comprar perfiles</a>
-      <a class="ghost" href="#renovar" onclick="return irA('renovar')">🔄 Renovar mi perfil</a>
-      <a class="ghost" href="#consultar" onclick="return irA('consultar')">🔑 Consultar mi cuenta</a>
       <a class="ghost" id="btnSoporte" href="https://wa.me/573044430163?text=Hola%2C%20necesito%20ayuda%20con%20Street25" target="_blank" rel="noopener">💬 Chatear con soporte</a>
     </div>
   </section>
@@ -310,34 +351,6 @@
     <div class="skel"></div><div class="skel"></div><div class="skel"></div>
   </div>
 
-  <h2 id="renovar">Renovar mi perfil</h2>
-  <div class="renbox">
-    <p>¿Ya eres cliente? Escribe el WhatsApp con el que compraste y renueva tus perfiles por 30 días más.</p>
-    <div class="rensearch">
-      <input type="tel" id="renWa" placeholder="Ej: 3001234567" maxlength="13" inputmode="numeric" onkeydown="if(event.key==='Enter')buscarPerfiles()">
-      <button class="cta" id="btnBuscar" onclick="buscarPerfiles()">Buscar</button>
-    </div>
-    <div id="renLista"></div>
-  </div>
-
-  <h2 id="consultar">Consultar mi cuenta</h2>
-  <div class="renbox">
-    <p>Pídenos tu código de consulta por WhatsApp y escríbelo aquí con tu número para ver los datos de tus perfiles (correo, clave, PIN y vencimiento).</p>
-    <div class="rensearch cqform">
-      <input type="tel" id="cqWa" placeholder="Tu WhatsApp" maxlength="13" inputmode="numeric">
-      <input type="tel" id="cqCod" class="cod" placeholder="Código" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')consultarCuenta()">
-      <button class="cta" id="btnCq" onclick="consultarCuenta()">Ver</button>
-    </div>
-    <p class="order" style="margin-top:10px" id="cqPedir"></p>
-    <div id="cqRes"></div>
-  </div>
-
-  <h2>¿Cómo funciona?</h2>
-  <div class="how" style="margin-top:12px">
-    <div class="step"><b>1. Elige</b><p>Agrega al carrito los perfiles que quieras.</p></div>
-    <div class="step"><b>2. Paga</b><p>Transfiere el total por Nequi o DaviPlata y sube la captura.</p></div>
-    <div class="step"><b>3. Recibe</b><p>Cuando confirmemos el pago, tus accesos aparecen aquí mismo.</p></div>
-  </div>
 </main>
 
 <footer>Street25 · Pagos por Nequi y DaviPlata · <span id="footWa"></span></footer>
@@ -410,7 +423,17 @@ var TERMINOS = [
 var CAT = null, carrito = {}, comprobante = null, sondeo = null;
 var modo = "compra", REN = null, renSel = {};
 
-function irA(id) { var e = document.getElementById(id); if (e) e.scrollIntoView({ behavior: "smooth", block: "start" }); return false; }
+function acTab(id) {
+  ["renovar", "consultar", "como"].forEach(function (k) {
+    var p = document.getElementById(k), t = document.getElementById("tab-" + k);
+    if (p) p.classList.toggle("on", k === id);
+    if (t) t.classList.toggle("on", k === id);
+  });
+}
+function irA(id) {
+  if (id === "renovar" || id === "consultar" || id === "como") { acTab(id); id = "accesos"; }
+  var e = document.getElementById(id); if (e) e.scrollIntoView({ behavior: "smooth", block: "start" }); return false;
+}
 
 function buscarPerfiles() {
   var wa = document.getElementById("renWa").value.replace(/\D/g, "");
