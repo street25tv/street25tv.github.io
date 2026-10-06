@@ -272,6 +272,16 @@
 .accesos .renbox{margin:0}
 .accesos .how{margin:0}
 @media(max-width:560px){.acTab{padding:10px 6px;font-size:12.5px}}
+/* ---- v11: referidos ---- */
+.refBanner{margin:16px 0 0;padding:12px 16px;border-radius:12px;background:linear-gradient(90deg,rgba(255,61,110,.14),rgba(123,92,255,.14));border:1px solid var(--line);font-size:14px}
+.refBox{margin-top:16px;padding:16px;border-radius:14px;border:1px dashed var(--acc2);background:var(--bg2)}
+.refBox>b{font-size:15px}
+.refBox p{color:var(--mut);font-size:13px;margin:6px 0 12px}
+.refLink{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.refLink code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--card);border:1px solid var(--line);padding:10px 12px;border-radius:10px;font-size:13px}
+.refBox .refMeta{margin-top:10px;font-size:13px;color:var(--mut)}
+.refBox .refMeta b{color:var(--txt)}
+.credNota{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.35);font-size:13px}
 </style>
 </head>
 <body>
@@ -284,6 +294,7 @@
 </header>
 
 <main class="wrap">
+  <div class="refBanner" id="refBanner" style="display:none"></div>
   <section class="accesos" id="accesos">
     <div class="acTabs">
       <button class="acTab on" id="tab-renovar" onclick="acTab('renovar')">🔄 Renovar mi perfil</button>
@@ -423,6 +434,32 @@ var TERMINOS = [
 var CAT = null, carrito = {}, comprobante = null, sondeo = null;
 var modo = "compra", REN = null, renSel = {};
 
+// ---- Referidos ----
+function refActual() { var r = leerLocal("st25_ref", null); return r && r.c && r.exp > Date.now() ? r.c : ""; }
+function refGuardar(c) {
+  c = String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
+  if (!c) return;
+  guardarLocal("st25_ref", { c: c, exp: Date.now() + 30 * 864e5 });
+  refMostrar(c);
+}
+function refMostrar(c) {
+  if (!c) return;
+  api("ref", { c: c }).then(function (r) {
+    if (!r || r.error || !r.nombre) { if (r && r.error) guardarLocal("st25_ref", null); return; }
+    var b = document.getElementById("refBanner");
+    if (b) { b.innerHTML = "👋 Te recomendó <b>" + esc(r.nombre) + "</b>. ¡Bienvenido a Street25!"; b.style.display = ""; }
+  }).catch(function () {});
+}
+function refCaja(x) {
+  if (!x || !x.link) return "";
+  var txt = "Te recomiendo Street25 para tus plataformas de streaming 🍿 Compra aquí: " + x.link;
+  return '<div class="refBox"><b>🎁 Gana ' + pesos(x.premio) + ' por cada amigo que compre</b>' +
+    '<p>Comparte tu enlace. Cuando un amigo nuevo compre con él, recibes ' + pesos(x.premio) + ' de crédito que se descuenta solo cuando renuevas.</p>' +
+    '<div class="refLink"><code>' + esc(x.link) + '</code><button class="copy" onclick="copiar(\'' + esc(x.link) + '\')">Copiar</button></div>' +
+    '<a class="cta full" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(txt) + '">Compartir por WhatsApp</a>' +
+    '<div class="refMeta">Has referido <b>' + (x.referidos || 0) + '</b> · Crédito disponible <b>' + pesos(x.saldo || 0) + '</b></div></div>';
+}
+
 function acTab(id) {
   ["renovar", "consultar", "como"].forEach(function (k) {
     var p = document.getElementById(k), t = document.getElementById("tab-" + k);
@@ -484,7 +521,7 @@ function consultarCuenta() {
           '<button class="copy" onclick="copiar(this.parentNode.querySelector(\'pre\').textContent)">Copiar datos</button></div>';
       }).join("") +
       '<p class="order" style="margin-top:10px">Tu código vence el ' + esc(r.vigencia) + '.</p>' +
-      '<button class="cta full" onclick="renovarDesdeConsulta(\'' + wa + '\')">🔄 Renovar mis perfiles</button>';
+      '<button class="cta full" onclick="renovarDesdeConsulta(\'' + wa + '\')">🔄 Renovar mis perfiles</button>' + refCaja(r.ref);
   }).catch(function (e) {
     aviso(e && e.message ? e.message : "No pudimos consultar tu cuenta.");
   }).then(function () { b.disabled = false; b.textContent = "Ver"; });
@@ -505,7 +542,8 @@ function pintarPedirCodigo() {
 function renTotal() {
   var t = 0, n = 0, f = 0;
   (REN ? REN.perfiles : []).forEach(function (p) { if (renSel[p.fila]) { t += p.precio; n++; f += Math.max(p.full || 0, p.precio); } });
-  return { t: t, n: n, f: f };
+  var c = Math.min((REN && REN.credito) || 0, t);
+  return { t: t - c, n: n, f: f, bruto: t, c: c };
 }
 
 function pintarRenovar() {
@@ -519,6 +557,7 @@ function pintarRenovar() {
       return '<label class="rp"><input type="checkbox"' + (renSel[p.fila] ? " checked" : "") + ' onchange="renSel[' + p.fila + ']=this.checked;pintarRenovar()">' +
         '<span class="t">' + esc(p.plataforma) + ' · perfil ' + esc(p.perfil) + est + '</span><b>' + (Math.max(p.full || 0, p.precio) > p.precio ? '<s class="old">' + pesos(p.full) + '</s>' : '') + pesos(p.precio) + '</b></label>';
     }).join("") +
+    (REN.credito > 0 ? '<p class="credNota">💳 Tienes <b>' + pesos(REN.credito) + '</b> de crédito por referidos' + (tot.c ? ': se descuentan ' + pesos(tot.c) + ' de este pago.' : '.') + '</p>' : '') +
     '<button class="cta full" onclick="abrirRenovacion()"' + (tot.n ? "" : " disabled") + '>Renovar ' + tot.n + (tot.n === 1 ? " perfil" : " perfiles") + ' · ' + pesos(tot.t) + '</button>';
 }
 
@@ -632,6 +671,7 @@ function leerParams(cb) {
 }
 function aplicarParams() {
   leerParams(function (p) {
+    if (p.ref) refGuardar(p.ref); else refMostrar(refActual());
     var limpio = function (v) { return String(v || "").replace(/\D/g, ""); };
     if (p.c) {
       document.getElementById("cqWa").value = limpio(p.c);
@@ -817,7 +857,7 @@ function pintarCarrito() {
       var full = Math.max(p.full || 0, p.precio);
       return '<div class="line"><span>🔄 ' + esc(p.plataforma) + ' <small style="color:var(--mut)">perfil ' + esc(p.perfil) + '</small></span><span class="r">' +
         (full > p.precio ? '<s class="old">' + pesos(full) + '</s>' : "") + pesos(p.precio) + '</span></div>';
-    }).join("") + lineaAhorro(rt.f, rt.t);
+    }).join("") + (rt.c ? '<div class="line"><span>💳 Crédito por referidos</span><span class="r">-' + pesos(rt.c) + '</span></div>' : "") + lineaAhorro(rt.f, rt.bruto);
     return;
   }
   document.getElementById("total").textContent = pesos(r.t);
@@ -885,8 +925,9 @@ function enviar() {
   var b = document.getElementById("btnEnviar"); b.disabled = true; b.textContent = "Enviando…";
   guardarLocal("st25_cliente", { nombre: nombre, wa: wa });
   var items = Object.keys(carrito).map(function (id) { return { id: id, cant: carrito[id] }; });
-  api("pedido", { nombre: nombre, contacto: wa, items: items, comprobante: comprobante }).then(function (r) {
+  api("pedido", { nombre: nombre, contacto: wa, items: items, comprobante: comprobante, ref: refActual() }).then(function (r) {
     if (!r || r.error) throw new Error((r && r.error) || "No se pudo enviar");
+    guardarLocal("st25_ref", null);
     var mis = leerLocal("st25_pedidos", []);
     mis.unshift({ id: r.id, token: r.token, total: r.total, fecha: Date.now() });
     guardarLocal("st25_pedidos", mis.slice(0, 20));
@@ -913,7 +954,7 @@ function limpiarPago() {
 function enviarRenovacion() {
   var filas = REN ? REN.perfiles.filter(function (p) { return renSel[p.fila]; }).map(function (p) { return p.fila; }) : [];
   if (!filas.length) return error("Escoge al menos un perfil para renovar.");
-  if (!comprobante) return error("Sube la captura de tu pago.");
+  if (!comprobante && renTotal().t > 0) return error("Sube la captura de tu pago.");
   if (!document.getElementById("acepto").checked) return error("Debes aceptar las condiciones.");
   var b = document.getElementById("btnEnviar"); b.disabled = true; b.textContent = "Enviando…";
   api("pedido", { tipo: "renovacion", contacto: REN.contacto, filas: filas, comprobante: comprobante }).then(function (r) {
