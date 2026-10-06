@@ -155,6 +155,47 @@
 .ctop .badge,.ctop .stack{flex-shrink:0}
 .ctop>div:last-child{min-width:0}
 .cname{overflow-wrap:anywhere}
+/* ---- Tarjetas en cuadrícula (v5) ---- */
+.grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));align-items:stretch}
+.card{gap:10px}
+.card .ctop{flex-direction:column;align-items:flex-start;gap:10px;padding-right:0}
+.card .ctop>div:last-child{width:100%;min-width:0}
+.card .ctop .badge,.card .ctop .stack{min-height:44px;align-items:center}
+.stack img{width:34px;height:34px;margin-left:-11px}
+.cname{font-size:16px;line-height:1.25;overflow-wrap:break-word;word-break:normal;padding-right:4px}
+.ctipo{margin-top:2px}
+.cdesc{min-height:0}
+.cprice{font-size:22px;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;line-height:1.2}
+.cprice .old{margin:0}
+.cprice small{white-space:nowrap}
+.save{margin-top:-4px}
+.card .qty{margin-top:auto}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 6px;margin-top:12px;scrollbar-width:none;position:sticky;top:60px;z-index:10;background:var(--bg)}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;display:flex;align-items:center;gap:6px;background:var(--card);color:var(--mut);border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
+.chip img{width:20px;height:20px;border-radius:6px;object-fit:cover;margin-left:-4px}
+.chip.on{color:#fff;border-color:transparent;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+@media(max-width:560px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .card{padding:12px;gap:8px;border-radius:14px}
+  .card .ctop .badge,.card .ctop .stack{min-height:36px}
+  .badge{width:36px;height:36px;border-radius:10px}
+  .stack img{width:28px;height:28px;margin-left:-12px;border-radius:8px}
+  .off{top:10px;right:10px;font-size:11px;padding:3px 7px}
+  .cname{font-size:14px}
+  .ctipo{font-size:11px}
+  .cdesc{display:none}
+  .comps{font-size:11px}
+  .comps li s{display:none}
+  .cprice{font-size:18px}
+  .cprice .old{font-size:12px}
+  .cprice small{font-size:11px}
+  .save,.stock{font-size:11px}
+  .qty{gap:6px}
+  .qty button{width:32px;height:32px}
+  .qty button.add{height:38px;font-size:13px}
+  .qty span{display:none}
+}
 </style>
 </head>
 <body>
@@ -184,7 +225,8 @@
   </section>
 
   <h2 id="catalogo">Catálogo</h2>
-  <div class="grid" id="grid">
+  <div class="chips" id="chips"></div>
+<div class="grid" id="grid">
     <div class="skel"></div><div class="skel"></div><div class="skel"></div>
   </div>
 
@@ -515,11 +557,13 @@ var NOMBRE_PLAT = { netflix: "Netflix", disney: "Disney+", amazon: "Amazon Prime
 function rangoPlat(p) { var i = ORDEN_PLAT.indexOf(String(p).toLowerCase()); return i === -1 ? ORDEN_PLAT.length : i; }
 function compPlat(a, b) { return rangoPlat(a) - rangoPlat(b) || String(a).localeCompare(String(b)); }
 
+var FILTRO = "", KEYS_PLAT = [];
+function filtrar(i) { FILTRO = i < 0 ? "" : (KEYS_PLAT[i] || ""); pintarCatalogo(); }
 function pintarCatalogo() {
   var g = document.getElementById("grid");
   CAT.items.forEach(function (x) { if (!x.combo && x.imagen) IMG_URL[clavePlat(x.plataforma)] = x.imagen; });
   if (!CAT.items.length) { g.innerHTML = '<p style="color:var(--mut)">Pronto tendremos perfiles disponibles.</p>'; return; }
-  // Cada combo va en el grupo de su plataforma más importante (Netflix > Disney > Amazon > ...)
+  // Cada combo va con su plataforma más importante (Netflix > Disney > Amazon > ...)
   var grupos = {};
   CAT.items.forEach(function (it) {
     var plats = it.combo ? it.componentes.map(function (k) { return k.plataforma; }) : [it.plataforma];
@@ -527,18 +571,22 @@ function pintarCatalogo() {
     var k = String(duena).toLowerCase();
     (grupos[k] = grupos[k] || { nombre: duena, items: [] }).items.push(it);
   });
-  g.innerHTML = Object.keys(grupos).sort(compPlat).map(function (k) {
-    var gr = grupos[k];
+  KEYS_PLAT = Object.keys(grupos).sort(compPlat);
+  KEYS_PLAT.forEach(function (k) {
     // Primero el perfil solo, luego sus combos (de menos a más plataformas, y por precio)
-    gr.items.sort(function (a, b) {
+    grupos[k].items.sort(function (a, b) {
       var na = a.combo ? a.componentes.length : 0, nb = b.combo ? b.componentes.length : 0;
       return na - nb || a.precio - b.precio;
     });
-    var hayCombos = gr.items.some(function (x) { return x.combo; });
-    return '<h3 class="gsub">' + (imgPlat(k) ? imgTag(imgPlat(k), '', imgRespaldo(k)).replace('<img ', '<img class="gl" ') : '') + esc(NOMBRE_PLAT[k] || gr.nombre) +
-      (hayCombos ? '<small>Perfil solo y combos con ' + esc(NOMBRE_PLAT[k] || gr.nombre) + '</small>' : '') + '</h3>' +
-      gr.items.map(tarjeta).join("");
-  }).join("");
+  });
+  if (FILTRO && !grupos[FILTRO]) FILTRO = "";
+  document.getElementById("chips").innerHTML = '<button class="chip' + (FILTRO ? '' : ' on') + '" onclick="filtrar(-1)">Todos</button>' +
+    KEYS_PLAT.map(function (k, i) {
+      var n = NOMBRE_PLAT[k] || grupos[k].nombre;
+      return '<button class="chip' + (FILTRO === k ? ' on' : '') + '" onclick="filtrar(' + i + ')">' + imgTag(imgPlat(k), '', imgRespaldo(k)) + esc(n) + '</button>';
+    }).join("");
+  g.innerHTML = KEYS_PLAT.filter(function (k) { return !FILTRO || k === FILTRO; })
+    .map(function (k) { return grupos[k].items.map(tarjeta).join(""); }).join("");
 }
 
 function item(id) { return CAT.items.filter(function (x) { return x.id === id; })[0]; }
