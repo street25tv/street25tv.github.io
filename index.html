@@ -196,6 +196,44 @@
   .qty button.add{height:38px;font-size:13px}
   .qty span{display:none}
 }
+/* ---- v6: antiestafa, buscador/orden, imágenes grandes ---- */
+.aviso{display:flex;gap:12px;align-items:flex-start;background:linear-gradient(90deg,rgba(245,158,11,.13),rgba(255,61,110,.10));border:1px solid rgba(245,158,11,.45);border-radius:var(--rad);padding:14px 16px;margin:4px 0 24px}
+.aviso:empty{display:none}
+.avi{font-size:26px;line-height:1}
+.avt{display:block;font-size:15px;margin-bottom:4px;color:#fbbf24}
+.aviso p{font-size:13px;line-height:1.55;color:var(--txt);opacity:.92}
+.aviso a{color:#fbbf24;font-weight:700}
+.tools{display:flex;gap:10px;margin-top:12px}
+.tools input,.tools select{background:var(--card);border:1px solid var(--line);color:var(--txt);padding:11px 14px;border-radius:12px;font-size:14px;font-family:inherit;min-width:0}
+.tools input{flex:1}
+.tools select{flex:0 0 auto;max-width:48%}
+.tools input:focus,.tools select:focus{outline:2px solid var(--acc2);border-color:transparent}
+.media{position:relative;margin:-18px -18px 2px;height:140px;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--c) 38%,transparent),transparent 72%),#0e0e16;border-bottom:1px solid var(--line)}
+.media img{object-fit:cover;background:#000;box-shadow:0 10px 26px rgba(0,0,0,.55)}
+.media .mlogo{width:96px;height:96px;border-radius:24px}
+.media.mgrid{display:grid;gap:8px;place-content:center;padding:12px 18px}
+.mgrid img{width:100%;aspect-ratio:1;border-radius:14px}
+.mgrid.n2{grid-template-columns:repeat(2,68px)}
+.mgrid.n3{grid-template-columns:repeat(3,58px)}
+.mgrid.n4{grid-template-columns:repeat(2,46px);align-content:end;padding-bottom:12px}
+.mgrid.n5,.mgrid.n6{grid-template-columns:repeat(3,38px);align-content:end;padding-bottom:12px}
+.mgrid.n7,.mgrid.n8,.mgrid.n9{grid-template-columns:repeat(3,34px)}
+.card .off{z-index:2}
+.card.soldout .media img{filter:grayscale(.7)}
+@media(max-width:560px){
+  .media{margin:-12px -12px 2px;height:108px}
+  .media .mlogo{width:72px;height:72px;border-radius:18px}
+  .media.mgrid{gap:6px;padding:10px}
+  .mgrid img{border-radius:10px}
+  .mgrid.n2{grid-template-columns:repeat(2,48px)}
+  .mgrid.n3{grid-template-columns:repeat(3,40px)}
+  .mgrid.n4{grid-template-columns:repeat(2,34px);padding-bottom:8px}
+  .mgrid.n5,.mgrid.n6{grid-template-columns:repeat(3,30px);padding-bottom:8px}
+  .tools input{flex:1 1 55%}
+  .tools select{flex:0 0 40%;max-width:40%;padding:11px 8px;font-size:13px}
+  .aviso{padding:12px}
+  .aviso p{font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -224,8 +262,19 @@
     </div>
   </section>
 
+  <div class="aviso" id="aviso"></div>
+
   <h2 id="catalogo">Catálogo</h2>
-  <div class="chips" id="chips"></div>
+  <div class="tools">
+  <input type="search" id="q" placeholder="🔎 Buscar…" autocomplete="off" oninput="BUSCA=this.value;pintarCatalogo()">
+  <select id="orden" onchange="ORDEN=this.value;pintarCatalogo()" aria-label="Ordenar">
+    <option value="">Recomendado</option>
+    <option value="asc">Precio: menor a mayor</option>
+    <option value="desc">Precio: mayor a menor</option>
+    <option value="pct">Mayor descuento</option>
+  </select>
+</div>
+<div class="chips" id="chips"></div>
 <div class="grid" id="grid">
     <div class="skel"></div><div class="skel"></div><div class="skel"></div>
   </div>
@@ -468,7 +517,7 @@ function cargar() {
     CAT = r;
     document.getElementById("dias").textContent = r.dias || 30;
     if (r.whatsapp) document.getElementById("footWa").innerHTML = '<a href="https://wa.me/' + esc(r.whatsapp) + '" target="_blank" rel="noopener">WhatsApp ' + esc(r.whatsapp.replace(/^57/, "")) + "</a>";
-    pintarCatalogo(); pintarPagos(); pintarPedirCodigo();
+    pintarCatalogo(); pintarPagos(); pintarPedirCodigo(); pintarAviso();
     if (!window._paramsHechos) { window._paramsHechos = true; aplicarParams(); }
   }).catch(function (e) {
     document.getElementById("grid").innerHTML = '<p style="color:var(--mut)">No pudimos cargar el catálogo. Recarga la página en un momento.</p>';
@@ -530,6 +579,26 @@ function aplicarParams() {
   });
 }
 
+function mediaHtml(it) {
+  if (it.combo) {
+    var n = it.componentes.length;
+    return '<div class="media mgrid n' + n + '">' + it.componentes.map(function (k) { return imgTag(imgPlat(k.plataforma), k.plataforma, imgRespaldo(k.plataforma)); }).join("") + '</div>';
+  }
+  return '<div class="media">' + imgTag(imgPlat(it.plataforma), it.plataforma, imgRespaldo(it.plataforma)).replace('<img ', '<img class="mlogo" ') + '</div>';
+}
+function normTxt(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim(); }
+function pintarAviso() {
+  var wa = String(CAT.whatsapp || "").replace(/^57/, "");
+  var waFmt = wa.replace(/^(\d{3})(\d{3})(\d{4})$/, "$1 $2 $3");
+  var pagos = (CAT.pagos || []).map(function (p) {
+    return '<b>' + esc(String(p.metodo || "").replace(/^[^A-Za-zÁÉÍÓÚáéíóúÑñ]+/, "")) + '</b>' + (p.titular ? ' a nombre de <b>' + esc(p.titular) + '</b>' : '');
+  }).join(" o ");
+  document.getElementById("aviso").innerHTML = '<div class="avi">⚠️</div><div><b class="avt">¡Cuidado con las estafas!</b><p>' +
+    (wa ? 'Nuestro <b>único WhatsApp oficial</b> es <a href="https://wa.me/' + esc(CAT.whatsapp) + '" target="_blank" rel="noopener">' + esc(waFmt) + '</a>. ' : '') +
+    (pagos ? 'Solo recibimos pagos por ' + pagos + '. ' : '') +
+    'Nunca te pediremos claves, códigos de verificación ni pagos a otros números. Si alguien te escribe desde otro número diciendo ser Street25, no le pagues y avísanos.</p></div>';
+}
+
 function tarjeta(it) {
   var cant = carrito[it.id] || 0, libres = it.disponibles - cant;
   var st = it.disponibles <= 0 ? '<span class="stock no">Agotado</span>' :
@@ -541,7 +610,7 @@ function tarjeta(it) {
   }).join("") + '</ul>' : "";
   return '<div class="card' + (it.disponibles <= 0 ? " soldout" : "") + (it.combo ? " combo" : "") + '" style="--c:' + color(it.plataforma) + '">' +
     (it.descuento > 0 ? '<span class="off">-' + it.descuento + '%</span>' : "") +
-    '<div class="ctop">' + badgeHtml(it) +
+    mediaHtml(it) + '<div class="ctop">' +
     '<div><div class="cname">' + esc(it.plataforma) + '</div><div class="ctipo">' + esc(it.tipo || "Perfil") + '</div></div></div>' +
     '<div class="cdesc">' + esc(it.descripcion) + '</div>' + comps +
     '<div class="cprice">' + pesos(it.precio) + (ahorro > 0 ? '<s class="old">' + pesos(full) + '</s>' : "") + ' <small>/ ' + (CAT.dias || 30) + ' días</small></div>' +
@@ -557,7 +626,7 @@ var NOMBRE_PLAT = { netflix: "Netflix", disney: "Disney+", amazon: "Amazon Prime
 function rangoPlat(p) { var i = ORDEN_PLAT.indexOf(String(p).toLowerCase()); return i === -1 ? ORDEN_PLAT.length : i; }
 function compPlat(a, b) { return rangoPlat(a) - rangoPlat(b) || String(a).localeCompare(String(b)); }
 
-var FILTRO = "", KEYS_PLAT = [];
+var FILTRO = "", KEYS_PLAT = [], BUSCA = "", ORDEN = "";
 function filtrar(i) { FILTRO = i < 0 ? "" : (KEYS_PLAT[i] || ""); pintarCatalogo(); }
 function pintarCatalogo() {
   var g = document.getElementById("grid");
@@ -585,8 +654,20 @@ function pintarCatalogo() {
       var n = NOMBRE_PLAT[k] || grupos[k].nombre;
       return '<button class="chip' + (FILTRO === k ? ' on' : '') + '" onclick="filtrar(' + i + ')">' + imgTag(imgPlat(k), '', imgRespaldo(k)) + esc(n) + '</button>';
     }).join("");
-  g.innerHTML = KEYS_PLAT.filter(function (k) { return !FILTRO || k === FILTRO; })
-    .map(function (k) { return grupos[k].items.map(tarjeta).join(""); }).join("");
+  var lista = [];
+  KEYS_PLAT.forEach(function (k) { if (!FILTRO || k === FILTRO) lista = lista.concat(grupos[k].items); });
+  var q = normTxt(BUSCA);
+  if (q) lista = lista.filter(function (it) {
+    var txt = it.plataforma + " " + (it.tipo || "") + " " + (NOMBRE_PLAT[clavePlat(it.plataforma)] || "") + " " +
+      (it.combo ? it.componentes.map(function (k) { return k.plataforma + " " + (NOMBRE_PLAT[clavePlat(k.plataforma)] || ""); }).join(" ") : "");
+    return q.split(" ").every(function (w) { return normTxt(txt).indexOf(w) !== -1; });
+  });
+  var agot = function (a, b) { return (a.disponibles <= 0) - (b.disponibles <= 0); };
+  if (ORDEN === "asc") lista = lista.slice().sort(function (a, b) { return agot(a, b) || a.precio - b.precio; });
+  else if (ORDEN === "desc") lista = lista.slice().sort(function (a, b) { return agot(a, b) || b.precio - a.precio; });
+  else if (ORDEN === "pct") lista = lista.slice().sort(function (a, b) { return agot(a, b) || (b.descuento || 0) - (a.descuento || 0) || a.precio - b.precio; });
+  g.innerHTML = lista.length ? lista.map(tarjeta).join("")
+    : '<p style="color:var(--mut);grid-column:1/-1;padding:10px 0">No encontramos resultados para «' + esc(BUSCA) + '». Prueba con otra plataforma.</p>';
 }
 
 function item(id) { return CAT.items.filter(function (x) { return x.id === id; })[0]; }
