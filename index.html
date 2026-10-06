@@ -443,14 +443,22 @@ function imgPlat(p) {
   if (!k) return "";
   if (IMG_URL[k]) return IMG_URL[k];
   if (typeof IMG_PLAT !== "undefined" && IMG_PLAT[k]) return IMG_PLAT[k];
+  return "https://www.google.com/s2/favicons?sz=128&domain=" + (DOMINIO_PLAT[k] || k + ".com");
+}
+// Si la imagen buscada no existe o sale muy pequeña, prueba con otro buscador de logos
+function imgRespaldo(p) {
+  var k = clavePlat(p);
+  if (!k || IMG_URL[k] || (typeof IMG_PLAT !== "undefined" && IMG_PLAT[k])) return "";
   return "https://icon.horse/icon/" + (DOMINIO_PLAT[k] || k + ".com");
 }
-function imgTag(src, alt) {
-  return '<img src="' + esc(src) + '" alt="' + esc(alt || "") + '" loading="lazy" onerror="this.onerror=null;this.style.visibility=\'hidden\'">';
+function imgTag(src, alt, resp) {
+  return '<img src="' + esc(src) + '" alt="' + esc(alt || "") + '" loading="lazy"' + (resp ? ' data-f="' + esc(resp) + '"' : '') +
+    ' onload="if(this.naturalWidth<48&&this.dataset.f){var f=this.dataset.f;this.dataset.f=\'\';this.src=f}"' +
+    ' onerror="if(this.dataset.f){var f=this.dataset.f;this.dataset.f=\'\';this.src=f}else{this.onerror=null;this.style.visibility=\'hidden\'}">';
 }
 function badgeHtml(it) {
-  if (it.combo) return '<div class="stack">' + it.componentes.map(function (k) { return imgTag(imgPlat(k.plataforma), k.plataforma); }).join("") + '</div>';
-  return '<div class="badge img">' + imgTag(imgPlat(it.plataforma), it.plataforma) + '</div>';
+  if (it.combo) return '<div class="stack">' + it.componentes.map(function (k) { return imgTag(imgPlat(k.plataforma), k.plataforma, imgRespaldo(k.plataforma)); }).join("") + '</div>';
+  return '<div class="badge img">' + imgTag(imgPlat(it.plataforma), it.plataforma, imgRespaldo(it.plataforma)) + '</div>';
 }
 
 // Enlaces directos: ?r=WhatsApp abre la renovación; ?c=WhatsApp&k=código abre la consulta
@@ -524,7 +532,7 @@ function pintarCatalogo() {
       return na - nb || a.precio - b.precio;
     });
     var hayCombos = gr.items.some(function (x) { return x.combo; });
-    return '<h3 class="gsub">' + (imgPlat(k) ? '<img class="gl" src="' + imgPlat(k) + '" alt="">' : '') + esc(NOMBRE_PLAT[k] || gr.nombre) +
+    return '<h3 class="gsub">' + (imgPlat(k) ? imgTag(imgPlat(k), '', imgRespaldo(k)).replace('<img ', '<img class="gl" ') : '') + esc(NOMBRE_PLAT[k] || gr.nombre) +
       (hayCombos ? '<small>Perfil solo y combos con ' + esc(NOMBRE_PLAT[k] || gr.nombre) + '</small>' : '') + '</h3>' +
       gr.items.map(tarjeta).join("");
   }).join("");
