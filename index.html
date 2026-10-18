@@ -496,8 +496,8 @@ function consultarCuenta() {
     if (!r.perfiles.length) { box.innerHTML = '<p class="order" style="margin-top:12px">No tienes perfiles activos con este número. Escríbenos por WhatsApp si crees que es un error.</p>'; return; }
     box.innerHTML = '<p style="margin:14px 0 4px;font-weight:600">Hola ' + esc(r.nombre || "") + ' 👋 estos son tus perfiles:</p>' +
       r.perfiles.map(function (p) {
-        var txt = "📺 " + p.plataforma + (p.tipo && !/normal/i.test(p.tipo) ? " " + p.tipo : "") + " — perfil " + p.perfil +
-          (p.pin ? "\n🔢 PIN: " + p.pin : "") + "\n📧 Correo: " + p.correo + "\n🔑 Clave: " + p.clave + "\n📅 Vence: " + (p.vence || "sin fecha");
+        var txt = "📺 Plataforma: " + p.plataforma + (p.tipo && !/normal/i.test(p.tipo) ? " " + p.tipo : "") + "\n📧 Correo: " + p.correo + "\n🔑 Contraseña: " + p.clave +
+          "\n👤 Perfil: " + p.perfil + (p.cliente ? " - " + p.cliente : "") + "\n🔢 PIN: " + (p.pin || "Sin PIN") + "\n📅 Vencimiento: " + (p.vence || "sin fecha");
         var est = p.dias === null || p.dias === undefined ? "" :
           (p.dias < 0 ? '<span style="color:var(--acc)">Vencido hace ' + (-p.dias) + ' días</span>' :
           (p.dias <= 5 ? '<span style="color:var(--warn)">Vence en ' + p.dias + ' días</span>' : 'Te quedan <b>' + p.dias + '</b> días'));
