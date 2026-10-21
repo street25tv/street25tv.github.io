@@ -311,7 +311,7 @@
     <div id="renLista"></div>
     </div>
     <div class="renbox acPanel" id="consultar">
-    <p>Pídenos tu código de consulta por WhatsApp y escríbelo aquí con tu número para ver los datos de tus perfiles (correo, clave, PIN y vencimiento).</p>
+    <p>Escribe tu WhatsApp y tu código de acceso (6 números) para ver los datos de tus perfiles: correo, contraseña, PIN y vencimiento.</p>
     <div class="rensearch cqform">
       <input type="tel" id="cqWa" placeholder="Tu WhatsApp" maxlength="13" inputmode="numeric">
       <input type="tel" id="cqCod" class="cod" placeholder="Código" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')consultarCuenta()">
@@ -372,6 +372,9 @@
       <input type="text" id="nombre" placeholder="Ej: Ana Gómez" maxlength="60" autocomplete="name">
       <label class="f" for="wa">WhatsApp</label>
       <input type="tel" id="wa" placeholder="Ej: 3001234567" maxlength="13" inputmode="numeric" autocomplete="tel">
+      <label class="f" for="clave">Tu código de acceso (6 números)</label>
+      <input type="password" id="clave" placeholder="Crea un código de 6 números" maxlength="6" inputmode="numeric" autocomplete="new-password">
+      <small style="display:block;color:var(--mut);font-size:12px;margin-top:4px">Con tu WhatsApp y este código verás tus datos cuando quieras en «Consultar mi cuenta». Si ya eres cliente y tienes código, déjalo vacío.</small>
     </div>
 
     <div class="sec">
@@ -507,11 +510,35 @@ function consultarCuenta() {
           (p.caida ? '<div class="warn">⚠️ Esta cuenta está en revisión. Si no te funciona, escríbenos y te la reponemos.</div>' : '') +
           '<button class="copy" onclick="copiar(this.parentNode.querySelector(\'pre\').textContent)">Copiar datos</button></div>';
       }).join("") +
-      '<p class="order" style="margin-top:10px">Tu código vence el ' + esc(r.vigencia) + '.</p>' +
+      cambioCodigoCaja() +
       '<button class="cta full" onclick="renovarDesdeConsulta(\'' + wa + '\')">🔄 Renovar mis perfiles</button>' + refCaja(r.ref);
   }).catch(function (e) {
     aviso(e && e.message ? e.message : "No pudimos consultar tu cuenta.");
   }).then(function () { b.disabled = false; b.textContent = "Ver"; });
+}
+
+function cambioCodigoCaja() {
+  return '<details style="margin-top:14px"><summary style="cursor:pointer;color:var(--mut);font-size:14px">🔐 Cambiar mi código de acceso</summary>' +
+    '<div class="rensearch" style="margin-top:8px"><input type="password" id="cqNuevo" placeholder="Nuevo código (6 números)" maxlength="6" inputmode="numeric" autocomplete="new-password">' +
+    '<button class="cta" id="btnCqNuevo" onclick="cambiarCodigo()">Guardar</button></div><p class="order" id="cqNuevoMsg" style="margin-top:8px"></p></details>';
+}
+function cambiarCodigo() {
+  var wa = document.getElementById("cqWa").value.replace(/\D/g, "");
+  if (wa.length === 12 && wa.indexOf("57") === 0) wa = wa.slice(2);
+  var act = document.getElementById("cqCod").value.replace(/\D/g, "");
+  var nuevo = document.getElementById("cqNuevo").value.replace(/\D/g, "");
+  var msg = document.getElementById("cqNuevoMsg");
+  if (nuevo.length !== 6) { msg.textContent = "El código nuevo debe tener 6 números."; return; }
+  var b = document.getElementById("btnCqNuevo"); b.disabled = true; b.textContent = "Guardando…";
+  api("cambiarcodigo", { contacto: wa, codigo: act, nuevo: nuevo }).then(function (r) {
+    if (!r || r.error) throw new Error((r && r.error) || "Sin respuesta");
+    document.getElementById("cqCod").value = nuevo;
+    document.getElementById("cqNuevo").value = "";
+    msg.textContent = "✅ Listo. Desde ahora tu código es el nuevo. Guárdalo bien.";
+    toast("Código actualizado ✓");
+  }).catch(function (e) {
+    msg.textContent = e && e.message ? e.message : "No se pudo cambiar el código.";
+  }).then(function () { b.disabled = false; b.textContent = "Guardar"; });
 }
 
 function renovarDesdeConsulta(wa) {
@@ -522,8 +549,8 @@ function renovarDesdeConsulta(wa) {
 
 function pintarPedirCodigo() {
   if (!CAT || !CAT.whatsapp) return;
-  document.getElementById("cqPedir").innerHTML = '¿No tienes código? <a target="_blank" rel="noopener" href="https://wa.me/' + esc(CAT.whatsapp) +
-    '?text=' + encodeURIComponent("Hola, quiero mi código de consulta de Street25") + '">Pídelo por WhatsApp</a>';
+  document.getElementById("cqPedir").innerHTML = '¿Olvidaste tu código? <a target="_blank" rel="noopener" href="https://wa.me/' + esc(CAT.whatsapp) +
+    '?text=' + encodeURIComponent("Hola, olvidé mi código de acceso de Street25") + '">Pídelo por WhatsApp</a>';
 }
 
 function renTotal() {
@@ -907,12 +934,14 @@ function enviar() {
   if (!resumen().n) return error("Tu carrito está vacío.");
   if (nombre.length < 2) return error("Escribe tu nombre.");
   if (wa.length !== 10) return error("Escribe tu WhatsApp de 10 dígitos.");
+  var clave = document.getElementById("clave").value.replace(/\D/g, "");
+  if (clave && clave.length !== 6) return error("Tu código de acceso debe tener 6 números.");
   if (!comprobante) return error("Sube la captura de tu pago.");
   if (!document.getElementById("acepto").checked) return error("Debes aceptar las condiciones.");
   var b = document.getElementById("btnEnviar"); b.disabled = true; b.textContent = "Enviando…";
   guardarLocal("st25_cliente", { nombre: nombre, wa: wa });
   var items = Object.keys(carrito).map(function (id) { return { id: id, cant: carrito[id] }; });
-  api("pedido", { nombre: nombre, contacto: wa, items: items, comprobante: comprobante, ref: refActual() }).then(function (r) {
+  api("pedido", { nombre: nombre, contacto: wa, clave: clave, items: items, comprobante: comprobante, ref: refActual() }).then(function (r) {
     if (!r || r.error) throw new Error((r && r.error) || "No se pudo enviar");
     guardarLocal("st25_ref", null);
     var mis = leerLocal("st25_pedidos", []);
@@ -923,6 +952,7 @@ function enviar() {
     document.getElementById("drop").innerHTML = "📎 Toca para subir la captura del pago<br><small>Imagen o PDF</small>";
     document.getElementById("file").value = "";
     document.getElementById("acepto").checked = false;
+    document.getElementById("clave").value = "";
     pintarCarrito(); cerrar("mCarrito"); cargar();
     verPedido(r.id, r.token);
   }).catch(function (e) {
@@ -988,6 +1018,7 @@ function pintarEstado(r) {
       : '<div class="status"><div class="big">🎉</div><b>¡Pago confirmado!</b><p>Estos son tus accesos. Guárdalos en un lugar seguro.</p></div>') +
       bloques.map(function (b) { return '<div class="acc"><pre>' + esc(b) + '</pre><button class="copy" onclick="copiar(this.previousElementSibling.textContent)">Copiar datos</button></div>'; }).join("") +
       (r.estado === "Parcial" ? '<p class="order" style="margin-top:12px">Parte de tu pedido no tenía cupo; te escribiremos por WhatsApp para resolverlo.</p>' : "") +
+      (r.tipo === "renovacion" ? "" : '<p class="order" style="margin-top:12px">🔐 Para volver a ver estos datos entra a «Consultar mi cuenta» con tu WhatsApp y tu código de acceso.</p>') +
       '<div style="text-align:center">' + wa + '</div>';
   } else {
     h = '<div class="status"><div class="big">😕</div><b>No pudimos confirmar tu pago</b><p>Escríbenos por WhatsApp con tu número de pedido y lo revisamos.</p>' + wa + '</div>';
@@ -1155,8 +1186,8 @@ body:has(.cartbar.show) #chBox{bottom:166px;max-height:calc(100vh - 196px)}
       pedirWa("para buscar tus perfiles", function (wa) {
         CH.datos.wa = wa; CH.espera = { tipo: "cod" };
         escribiendo(function () {
-          bot("Ahora escribe tu <b>código de consulta</b> (6 dígitos). Si no lo tienes, pídelo por WhatsApp y te lo enviamos.");
-          opciones([{ t: "📲 Pedir mi código", url: waLink("Hola, quiero mi código de consulta de Street25"), cls: "wa" }]);
+          bot("Ahora escribe tu <b>código de acceso</b> (6 números). Si lo olvidaste, pídelo por WhatsApp.");
+          opciones([{ t: "📲 Olvidé mi código", url: waLink("Hola, olvidé mi código de acceso de Street25"), cls: "wa" }]);
         });
       });
     },
@@ -1266,8 +1297,8 @@ body:has(.cartbar.show) #chBox{bottom:166px;max-height:calc(100vh - 196px)}
       otraCosa();
     }).catch(function (x) {
       e.remove();
-      bot("No pude consultar: " + esc(x && x.message ? x.message : "intenta de nuevo") + ". Revisa el número y el código, o pide uno nuevo.");
-      opciones([{ t: "🔁 Intentar otra vez", fn: function () { escribiendo(RESP.acceso); } }, { t: "📲 Pedir código nuevo", url: waLink("Hola, quiero mi código de consulta de Street25"), cls: "wa" }]);
+      bot("No pude consultar: " + esc(x && x.message ? x.message : "intenta de nuevo") + ". Revisa el número y el código.");
+      opciones([{ t: "🔁 Intentar otra vez", fn: function () { escribiendo(RESP.acceso); } }, { t: "📲 Olvidé mi código", url: waLink("Hola, olvidé mi código de acceso de Street25"), cls: "wa" }]);
     });
   }
   window.chAbrir = function () {
