@@ -1093,6 +1093,15 @@ body:has(.cartbar.show) #chBox{bottom:166px;max-height:calc(100vh - 196px)}
     return "• <b>" + esc(it.plataforma) + (it.tipo && !/normal|perfil/i.test(it.tipo) ? " " + esc(it.tipo) : "") + "</b>: " + pesos(it.precio) +
       (full > it.precio ? " <s style='color:var(--mut)'>" + pesos(full) + "</s>" : "") + (it.disponibles <= 0 ? " <i>(agotado)</i>" : "");
   }
+  function listar(lista, max) {
+    var ord = lista.slice().sort(function (a, b) { return (a.disponibles <= 0) - (b.disponibles <= 0); });
+    var hay = ord.filter(function (it) { return it.disponibles > 0; }), agot = ord.length - hay.length;
+    var ver = (hay.length ? hay : ord).slice(0, max);
+    var txt = ver.map(function (it) { return linea(it) + (it.combo ? "\n   " + it.componentes.map(function (k) { return esc(k.plataforma); }).join(" + ") : ""); }).join("\n");
+    if (hay.length > max) txt += "\n\n…y " + (hay.length - max) + " opciones más en el catálogo.";
+    if (hay.length && agot) txt += "\n\n(" + agot + (agot === 1 ? " opción agotada" : " opciones agotadas") + " por ahora)";
+    return txt;
+  }
   function botonesAgregar(lista) {
     var ok = lista.filter(function (it) { return it.disponibles > 0; }).slice(0, 6);
     if (!ok.length) return otraCosa();
@@ -1130,9 +1139,8 @@ body:has(.cartbar.show) #chBox{bottom:166px;max-height:calc(100vh - 196px)}
       if (sinCatalogo()) return;
       var c = items().filter(function (it) { return it.combo; });
       if (!c.length) { bot("Ahora mismo no tenemos combos publicados, pero puedes armar tu propio paquete con varios perfiles."); return otraCosa(); }
-      bot("Combos con descuento 🎁\n\n" + c.map(function (it) {
-        return linea(it) + "\n   " + it.componentes.map(function (k) { return esc(k.plataforma); }).join(" + ");
-      }).join("\n"));
+      c.sort(function (a, b) { return a.precio - b.precio; });
+      bot("Combos con descuento 🎁\n\n" + listar(c, 10));
       botonesAgregar(c);
     },
     pagar: function () {
@@ -1207,7 +1215,7 @@ body:has(.cartbar.show) #chBox{bottom:166px;max-height:calc(100vh - 196px)}
           (c === "amazon" && /prime/.test(q)) || (c === "hbo" && /\bmax\b/.test(q)) || (c === "disney" && /disney/.test(q)) || (c === "youtube" && /youtube|yt/.test(q));
       });
     });
-    return res.sort(function (a, b) { return (a.combo - b.combo) || a.precio - b.precio; });
+    return res.sort(function (a, b) { return ((a.disponibles <= 0) - (b.disponibles <= 0)) || (a.combo - b.combo) || a.precio - b.precio; });
   }
   function responder(texto) {
     var q = normTxt(texto);
@@ -1229,9 +1237,7 @@ body:has(.cartbar.show) #chBox{bottom:166px;max-height:calc(100vh - 196px)}
     for (var i = 0; i < CLAVES.length; i++) { if (CLAVES[i][0].test(q)) { tema = CLAVES[i][1]; break; } }
     var plats = window.CAT ? buscarPlataforma(q) : [];
     if (plats.length && (!tema || tema === "precios" || tema === "pagar" || tema === "garantia")) {
-      bot("Esto tenemos de lo que buscas 👇\n\n" + plats.slice(0, 8).map(function (it) {
-        return linea(it) + (it.combo ? "\n   " + it.componentes.map(function (k) { return esc(k.plataforma); }).join(" + ") : "");
-      }).join("\n") + "\n\nCada perfil dura " + dias() + " días.");
+      bot("Esto tenemos de lo que buscas 👇\n\n" + listar(plats, 8) + "\n\nCada perfil dura " + dias() + " días.");
       return botonesAgregar(plats);
     }
     if (tema) return RESP[tema]();
