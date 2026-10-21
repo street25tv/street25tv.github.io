@@ -1016,5 +1016,268 @@ function demo(accion, d) {
 if (leerLocal("st25_pedidos", []).length) document.getElementById("btnMis").style.display = "";
 cargar();
 </script>
+<!-- ===== CHAT BOT STREET25 ===== -->
+<style>
+#chBtn{position:fixed;right:16px;bottom:20px;z-index:40;width:58px;height:58px;border-radius:50%;border:0;cursor:pointer;font-size:26px;color:#fff;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 8px 24px rgba(0,0,0,.45);transition:bottom .25s,transform .15s}
+#chBtn:active{transform:scale(.94)}
+#chBtn .chDot{position:absolute;top:6px;right:6px;width:12px;height:12px;border-radius:50%;background:var(--ok);border:2px solid var(--bg)}
+body:has(.cartbar.show) #chBtn{bottom:96px}
+#chBox{position:fixed;right:16px;bottom:90px;z-index:45;width:370px;max-width:calc(100vw - 32px);height:560px;max-height:calc(100vh - 120px);display:none;flex-direction:column;background:var(--bg2);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.55)}
+#chBox.show{display:flex}
+body:has(.cartbar.show) #chBox{bottom:166px;max-height:calc(100vh - 196px)}
+.chHead{display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(90deg,rgba(255,61,110,.18),rgba(123,92,255,.18));border-bottom:1px solid var(--line)}
+.chHead .chAv{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--acc),var(--acc2));font-weight:800;font-size:13px}
+.chHead b{display:block;font-size:14px}.chHead small{color:var(--ok);font-size:12px}
+.chHead button{margin-left:auto;background:none;border:0;color:var(--mut);font-size:20px;cursor:pointer}
+#chMsgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
+.chM{max-width:86%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word}
+.chM.bot{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px}
+.chM.yo{align-self:flex-end;background:var(--acc2);color:#fff;border-bottom-right-radius:4px}
+.chM a{color:#7dd3fc}
+.chM pre{margin:6px 0;white-space:pre-wrap;font:inherit;font-size:13px;background:var(--bg);padding:8px;border-radius:8px}
+.chOps{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-start;max-width:100%}
+.chOps button,.chOps a{background:transparent;border:1px solid var(--acc2);color:var(--txt);padding:7px 11px;border-radius:999px;font-size:13px;cursor:pointer;text-decoration:none;font-family:inherit;line-height:1.2;white-space:nowrap}
+.chOps button:hover,.chOps a:hover{background:rgba(123,92,255,.2)}
+.chOps .wa{border-color:#25d366;color:#25d366}
+.chEsc{align-self:flex-start;color:var(--mut);font-size:13px;padding:4px 8px}
+.chIn{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);background:var(--bg)}
+.chIn input{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:999px;padding:10px 14px;font-size:14px;outline:none}
+.chIn button{border:0;border-radius:50%;width:40px;height:40px;background:var(--acc);color:#fff;font-size:16px;cursor:pointer}
+</style>
+
+<button id="chBtn" onclick="chAbrir()" aria-label="Abrir chat de ayuda">💬<span class="chDot"></span></button>
+<div id="chBox" role="dialog" aria-label="Chat Street25">
+  <div class="chHead"><div class="chAv">S25</div><div><b>Asistente Street25</b><small>● En línea</small></div><button onclick="chCerrar()" aria-label="Cerrar">✕</button></div>
+  <div id="chMsgs"></div>
+  <form class="chIn" onsubmit="chEnviar();return false"><input id="chTxt" placeholder="Escribe tu pregunta…" autocomplete="off" maxlength="200"><button type="submit" aria-label="Enviar">➤</button></form>
+</div>
+
+<script>
+(function () {
+  var CH = { iniciado: false, espera: null, datos: {} };
+  var MENU = [
+    ["💰 Precios", "precios"], ["🎁 Combos", "combos"], ["💳 Cómo pagar", "pagar"],
+    ["🔑 Mis datos de acceso", "acceso"], ["🔄 Renovar", "renovar"], ["⚠️ Mi cuenta no funciona", "falla"],
+    ["🤝 Gana con referidos", "referidos"], ["👤 Hablar con un asesor", "asesor"]
+  ];
+  function $(id) { return document.getElementById(id); }
+  function waNum() { return (window.CAT && CAT.whatsapp) || "573044430163"; }
+  function waLink(t) { return "https://wa.me/" + waNum() + "?text=" + encodeURIComponent(t); }
+  function bajar() { var m = $("chMsgs"); m.scrollTop = m.scrollHeight; }
+  function bot(html) { var d = document.createElement("div"); d.className = "chM bot"; d.innerHTML = html; $("chMsgs").appendChild(d); bajar(); return d; }
+  function yo(t) { var d = document.createElement("div"); d.className = "chM yo"; d.textContent = t; $("chMsgs").appendChild(d); bajar(); }
+  function opciones(lista) {
+    var d = document.createElement("div"); d.className = "chOps";
+    lista.forEach(function (o) {
+      if (o.url) { var a = document.createElement("a"); a.href = o.url; a.target = "_blank"; a.rel = "noopener"; a.className = o.cls || ""; a.textContent = o.t; d.appendChild(a); return; }
+      var b = document.createElement("button"); b.type = "button"; b.textContent = o.t;
+      b.onclick = function () { yo(o.t); o.fn(); }; d.appendChild(b);
+    });
+    $("chMsgs").appendChild(d); bajar();
+  }
+  function escribiendo(fn) {
+    var e = document.createElement("div"); e.className = "chEsc"; e.textContent = "Escribiendo…"; $("chMsgs").appendChild(e); bajar();
+    setTimeout(function () { e.remove(); fn(); }, 450);
+  }
+  function menu(t) {
+    if (t) bot(t);
+    opciones(MENU.map(function (m) { return { t: m[0], fn: function () { escribiendo(function () { RESP[m[1]](); }); } }; }));
+  }
+  function otraCosa() {
+    opciones([{ t: "📋 Ver menú", fn: function () { menu("¿En qué más te ayudo?"); } }, { t: "👤 Asesor por WhatsApp", url: waLink("Hola, necesito ayuda con Street25"), cls: "wa" }]);
+  }
+  function items() { return (window.CAT && CAT.items) || []; }
+  function dias() { return (window.CAT && CAT.dias) || 30; }
+  function linea(it) {
+    var full = Math.max(it.full || 0, it.precio);
+    return "• <b>" + esc(it.plataforma) + (it.tipo && !/normal|perfil/i.test(it.tipo) ? " " + esc(it.tipo) : "") + "</b>: " + pesos(it.precio) +
+      (full > it.precio ? " <s style='color:var(--mut)'>" + pesos(full) + "</s>" : "") + (it.disponibles <= 0 ? " <i>(agotado)</i>" : "");
+  }
+  function botonesAgregar(lista) {
+    var ok = lista.filter(function (it) { return it.disponibles > 0; }).slice(0, 6);
+    if (!ok.length) return otraCosa();
+    opciones(ok.map(function (it) {
+      return { t: "➕ " + it.plataforma + (it.combo ? "" : (it.tipo && !/normal|perfil/i.test(it.tipo) ? " " + it.tipo : "")), fn: function () {
+        cambiar(it.id, 1);
+        escribiendo(function () {
+          bot("Listo, agregué <b>" + esc(it.plataforma) + "</b> al carrito 🛒. Cuando termines, toca el carrito abajo para pagar.");
+          opciones([{ t: "🛒 Ir a pagar", fn: function () { chCerrar(); abrirCarrito(); } }, { t: "📋 Ver menú", fn: function () { menu("¿Algo más?"); } }]);
+        });
+      } };
+    }));
+    otraCosa();
+  }
+  function sinCatalogo() {
+    if (window.CAT) return false;
+    bot("Estoy cargando los precios, dame unos segundos e intenta de nuevo 🙏"); otraCosa(); return true;
+  }
+  function pedirWa(motivo, siguiente) {
+    var g = (typeof leerLocal === "function" && leerLocal("st25_cliente", {}).wa) || "";
+    CH.espera = { tipo: "wa", fn: siguiente };
+    bot("Escríbeme el <b>número de WhatsApp</b> con el que compraste (10 dígitos)" + (motivo ? " " + motivo : "") + ".");
+    if (g) opciones([{ t: "Usar " + g, fn: function () { CH.espera = null; siguiente(g); } }]);
+  }
+  function limpiarWa(t) { var w = String(t).replace(/\D/g, ""); if (w.length === 12 && w.indexOf("57") === 0) w = w.slice(2); return w; }
+
+  var RESP = {
+    precios: function () {
+      if (sinCatalogo()) return;
+      var sueltos = items().filter(function (it) { return !it.combo; }).sort(function (a, b) { return compPlat(a.plataforma, b.plataforma) || a.precio - b.precio; });
+      bot("Estos son nuestros precios por perfil (" + dias() + " días) 👇\n\n" + sueltos.map(linea).join("\n") + "\n\nTodos son perfiles personales con PIN.");
+      botonesAgregar(sueltos);
+    },
+    combos: function () {
+      if (sinCatalogo()) return;
+      var c = items().filter(function (it) { return it.combo; });
+      if (!c.length) { bot("Ahora mismo no tenemos combos publicados, pero puedes armar tu propio paquete con varios perfiles."); return otraCosa(); }
+      bot("Combos con descuento 🎁\n\n" + c.map(function (it) {
+        return linea(it) + "\n   " + it.componentes.map(function (k) { return esc(k.plataforma); }).join(" + ");
+      }).join("\n"));
+      botonesAgregar(c);
+    },
+    pagar: function () {
+      var m = ((window.CAT && CAT.pagos) || []).map(function (p) { return String(p.metodo || "").replace(/^[^A-Za-zÁÉÍÓÚáéíóúÑñ]+/, ""); }).filter(Boolean);
+      bot("Comprar es muy fácil:\n\n<b>1.</b> Agrega tus perfiles al carrito.\n<b>2.</b> Paga el total por " + (m.length ? esc(m.join(" o ")) : "Nequi o DaviPlata") +
+        " (los datos aparecen al abrir el carrito).\n<b>3.</b> Sube la captura del pago.\n<b>4.</b> Cuando confirmemos, tus accesos aparecen en esta misma página ⚡\n\n" +
+        "⚠️ Solo pagamos a los datos que ves dentro del carrito. Nunca te pediremos pagos a otros números.");
+      opciones([{ t: "💰 Ver precios", fn: function () { escribiendo(RESP.precios); } }, { t: "🛒 Abrir carrito", fn: function () { chCerrar(); abrirCarrito(); } }]);
+      otraCosa();
+    },
+    acceso: function () {
+      pedirWa("para buscar tus perfiles", function (wa) {
+        CH.datos.wa = wa; CH.espera = { tipo: "cod" };
+        escribiendo(function () {
+          bot("Ahora escribe tu <b>código de consulta</b> (6 dígitos). Si no lo tienes, pídelo por WhatsApp y te lo enviamos.");
+          opciones([{ t: "📲 Pedir mi código", url: waLink("Hola, quiero mi código de consulta de Street25"), cls: "wa" }]);
+        });
+      });
+    },
+    renovar: function () {
+      pedirWa("para ver tus perfiles", function (wa) {
+        escribiendo(function () {
+          bot("Te llevo a la renovación con el número <b>" + esc(wa) + "</b> 🔄");
+          setTimeout(function () { chCerrar(); $("renWa").value = wa; irA("renovar"); buscarPerfiles(); }, 700);
+        });
+      });
+    },
+    falla: function () {
+      bot("Lamento eso 😔 Primero prueba esto:\n\n• Cierra sesión y vuelve a entrar con el correo y la contraseña que te enviamos.\n• Revisa que entres a <b>tu perfil</b> con tu PIN.\n• Si dice que la contraseña es incorrecta o la cuenta no abre, avísanos y te lo reponemos.");
+      opciones([
+        { t: "🔑 Ver mis datos", fn: function () { escribiendo(RESP.acceso); } },
+        { t: "📲 Reportar por WhatsApp", url: waLink("Hola, mi cuenta de Street25 no funciona. Mi número es: "), cls: "wa" }
+      ]);
+    },
+    referidos: function () {
+      bot("¡Gana saldo recomendando! 🤝\n\nCada vez que alguien compra con <b>tu enlace</b> y su pedido se paga, recibes <b>$2.000 de saldo</b> para tus renovaciones. El saldo no vence.\n\nTu enlace aparece en <b>Consultar mi cuenta</b>.");
+      opciones([{ t: "🔑 Ver mi enlace", fn: function () { escribiendo(RESP.acceso); } }]);
+      otraCosa();
+    },
+    asesor: function () {
+      bot("Con gusto. Toca el botón y te atiende una persona por WhatsApp 👇");
+      opciones([{ t: "💬 Abrir WhatsApp", url: waLink("Hola, necesito ayuda con Street25"), cls: "wa" }, { t: "📋 Ver menú", fn: function () { menu("¿Algo más?"); } }]);
+    },
+    garantia: function () {
+      bot("Cada perfil dura <b>" + dias() + " días</b> desde la entrega y es personal, con PIN.\n\nSi falla durante la vigencia, te lo reponemos. Antes de vencer te avisamos por WhatsApp para renovar.");
+      otraCosa();
+    },
+    entrega: function () {
+      bot("La entrega es el <b>mismo día</b> ⚡ Revisamos el pago a mano y en cuanto lo confirmemos, tus accesos aparecen en esta página (normalmente en minutos, en horario de atención).");
+      otraCosa();
+    }
+  };
+
+  var CLAVES = [
+    [/combo|paquete|promo|descuento|oferta/, "combos"],
+    [/no (me )?(funciona|sirve|abre|deja|carga)|no puedo entrar|se cayo|caida|error|fall|incorrect|bloque/, "falla"],
+    [/renov|extender|otro mes|vencid|vence/, "renovar"],
+    [/clave|contrasena|correo|pin|datos|acceso|usuario|mi cuenta|consult|codigo/, "acceso"],
+    [/pag|nequi|davi|transfer|cuenta bancaria|como compro|comprar|compra/, "pagar"],
+    [/refer|recomend|invit|saldo|credito|ganar/, "referidos"],
+    [/asesor|humano|persona|hablar|whats|soporte|ayuda/, "asesor"],
+    [/dura|garant|cuanto tiempo|30 dias|dias|segur|personal|compart/, "garantia"],
+    [/cuando llega|demora|tarda|entrega|rapido/, "entrega"],
+    [/precio|cuanto|vale|cuesta|valor|tarifa|catalogo|plataforma/, "precios"]
+  ];
+  function buscarPlataforma(q) {
+    var res = items().filter(function (it) {
+      var nombres = it.combo ? it.componentes.map(function (k) { return k.plataforma; }) : [it.plataforma];
+      return nombres.some(function (n) {
+        var c = clavePlat(n), largo = normTxt(NOMBRE_PLAT[c] || n);
+        return q.indexOf(c) !== -1 || q.indexOf(normTxt(n)) !== -1 || q.indexOf(largo) !== -1 ||
+          (c === "amazon" && /prime/.test(q)) || (c === "hbo" && /\bmax\b/.test(q)) || (c === "disney" && /disney/.test(q)) || (c === "youtube" && /youtube|yt/.test(q));
+      });
+    });
+    return res.sort(function (a, b) { return (a.combo - b.combo) || a.precio - b.precio; });
+  }
+  function responder(texto) {
+    var q = normTxt(texto);
+    if (CH.espera && CH.espera.tipo === "wa") {
+      var w = limpiarWa(texto);
+      if (w.length === 10) { var f = CH.espera.fn; CH.espera = null; return f(w); }
+      if (/\d/.test(texto)) return bot("Ese número no se ve bien 🤔 Escribe los 10 dígitos, por ejemplo 3001234567.");
+      CH.espera = null;
+    }
+    if (CH.espera && CH.espera.tipo === "cod") {
+      var cod = String(texto).replace(/\D/g, "");
+      if (cod.length === 6) { CH.espera = null; return consultar(CH.datos.wa, cod); }
+      if (/\d/.test(texto)) return bot("El código tiene <b>6 dígitos</b>. Revísalo e intenta de nuevo.");
+      CH.espera = null;
+    }
+    if (/^(hola|buen|hey|ola|saludos|que mas|q mas)/.test(q) && q.length < 25) return menu("¡Hola! 👋 Soy el asistente de Street25. ¿En qué te ayudo?");
+    if (/gracias|listo|perfecto|ok$|vale$|dale$/.test(q) && q.length < 25) { bot("¡Con gusto! 🙌 Aquí estoy si necesitas algo más."); return otraCosa(); }
+    var tema = null;
+    for (var i = 0; i < CLAVES.length; i++) { if (CLAVES[i][0].test(q)) { tema = CLAVES[i][1]; break; } }
+    var plats = window.CAT ? buscarPlataforma(q) : [];
+    if (plats.length && (!tema || tema === "precios" || tema === "pagar" || tema === "garantia")) {
+      bot("Esto tenemos de lo que buscas 👇\n\n" + plats.slice(0, 8).map(function (it) {
+        return linea(it) + (it.combo ? "\n   " + it.componentes.map(function (k) { return esc(k.plataforma); }).join(" + ") : "");
+      }).join("\n") + "\n\nCada perfil dura " + dias() + " días.");
+      return botonesAgregar(plats);
+    }
+    if (tema) return RESP[tema]();
+    bot("No estoy seguro de haberte entendido 🤔 Elige una opción o escríbele a un asesor:");
+    menu();
+  }
+  function consultar(wa, cod) {
+    var e = bot("Buscando tus perfiles… 🔎");
+    api("consulta", { contacto: wa, codigo: cod }).then(function (r) {
+      if (!r || r.error) throw new Error((r && r.error) || "Sin respuesta");
+      try { guardarLocal("st25_cliente", Object.assign(leerLocal("st25_cliente", {}), { wa: wa })); } catch (x) {}
+      e.remove();
+      if (!r.perfiles.length) { bot("No encontré perfiles activos con ese número. Si crees que es un error, escríbenos."); return otraCosa(); }
+      bot("Hola " + esc(r.nombre || "") + " 👋 estos son tus perfiles:");
+      r.perfiles.forEach(function (p) {
+        var txt = "📺 Plataforma: " + p.plataforma + (p.tipo && !/normal/i.test(p.tipo) ? " " + p.tipo : "") + "\n📧 Correo: " + p.correo + "\n🔑 Contraseña: " + p.clave +
+          "\n👤 Perfil: " + p.perfil + (p.cliente ? " - " + p.cliente : "") + "\n🔢 PIN: " + (p.pin || "Sin PIN") + "\n📅 Vencimiento: " + (p.vence || "sin fecha");
+        var est = p.dias === null || p.dias === undefined ? "" : (p.dias < 0 ? "⛔ Vencido hace " + (-p.dias) + " días" : (p.dias <= 5 ? "⏳ Vence en " + p.dias + " días" : "✅ Te quedan " + p.dias + " días"));
+        var d = bot("<pre></pre>" + esc(est) + (p.caida ? "\n⚠️ Esta cuenta está en revisión. Si no te funciona, avísanos." : ""));
+        d.querySelector("pre").textContent = txt;
+        var b = document.createElement("div"); b.className = "chOps";
+        var c = document.createElement("button"); c.type = "button"; c.textContent = "📋 Copiar datos"; c.onclick = function () { copiar(txt); };
+        b.appendChild(c); $("chMsgs").appendChild(b);
+      });
+      opciones([{ t: "🔄 Renovar mis perfiles", fn: function () { chCerrar(); renovarDesdeConsulta(wa); } }, { t: "🤝 Mi enlace de referidos", fn: function () { chCerrar(); $("cqWa").value = wa; $("cqCod").value = cod; irA("consultar"); consultarCuenta(); } }]);
+      otraCosa();
+    }).catch(function (x) {
+      e.remove();
+      bot("No pude consultar: " + esc(x && x.message ? x.message : "intenta de nuevo") + ". Revisa el número y el código, o pide uno nuevo.");
+      opciones([{ t: "🔁 Intentar otra vez", fn: function () { escribiendo(RESP.acceso); } }, { t: "📲 Pedir código nuevo", url: waLink("Hola, quiero mi código de consulta de Street25"), cls: "wa" }]);
+    });
+  }
+  window.chAbrir = function () {
+    $("chBox").classList.add("show"); $("chBtn").style.display = "none";
+    var dot = document.querySelector("#chBtn .chDot"); if (dot) dot.remove();
+    if (!CH.iniciado) { CH.iniciado = true; menu("¡Hola! 👋 Soy el asistente de Street25.\nTe ayudo con precios, pagos, tus datos de acceso y renovaciones. ¿Qué necesitas?"); }
+    setTimeout(function () { $("chTxt").focus(); }, 50);
+  };
+  window.chCerrar = function () { $("chBox").classList.remove("show"); $("chBtn").style.display = ""; };
+  window.chEnviar = function () {
+    var i = $("chTxt"), t = i.value.trim(); if (!t) return;
+    i.value = ""; yo(t); escribiendo(function () { responder(t); });
+  };
+})();
+</script>
+<!-- ===== FIN CHAT BOT ===== -->
+
 </body>
 </html>
