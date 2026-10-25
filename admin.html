@@ -528,7 +528,8 @@ function verCliente(tel, abrirComp) {
           '<pre class="acc">' + esc(p.acceso) + '</pre>' +
           '<div class="row"><button class="btn sec sm" onclick="copiar(document.querySelector(\'#f_' + p.fila + ' pre\').textContent)">Copiar datos</button>' +
           '<a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waUrl(c.contacto, p.acceso)) + '">📲 Enviar datos</a>' +
-          '<button class="btn sm" onclick="renovarPerfil(' + p.fila + ',this)">🔄 Renovar 30 días' + (p.precio ? " · " + pesos(p.precio) : "") + '</button>' +
+          '<button class="btn sm" data-m="' + pesos(p.lista || p.precio) + '" onclick="renovarPerfil(' + p.fila + ',this)">🔄 Renovar 30 días' + ((p.lista || p.precio) ? " · " + pesos(p.lista || p.precio) : "") + '</button>' +
+          (p.lista && p.precio && p.lista > p.precio ? '<span class="vend" title="Renueva al valor actual del perfil">antes ' + pesos(p.precio) + ' ↑</span>' : '') +
           '<button class="btn sec sm" onclick="garForm(' + p.fila + ')">🛡 Garantía</button>' +
           '<button class="btn bad sm" onclick="liberarPerfil(' + p.fila + ',this)">🔓 Liberar</button></div><div class="pisoi"></div><div class="cmpi"></div><div class="res"></div></div>';
       }).join("");
@@ -602,7 +603,7 @@ function enviarCodigo(tel) {
   api("adm_codigo", { contacto: tel }).then(function (r) { $("cmsg").innerHTML = msgBox(r.mensaje, "Mensaje con el código"); }).catch(function (e) { $("cmsg").innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
 }
 function renovarPerfil(fila, btn) {
-  if (!confirm("¿Ya recibiste el pago? Se sumarán 30 días a este perfil.")) return;
+  if (!confirm("¿Ya recibiste el pago" + (btn.getAttribute("data-m") ? " de " + btn.getAttribute("data-m") : "") + "? Se sumarán 30 días a este perfil y queda con el valor actual del perfil.")) return;
   btn.disabled = true; btn.textContent = "Renovando…";
   api("adm_renovar", { fila: fila }).then(function (r) {
     $("f_" + fila).querySelector(".res").innerHTML = '<div style="margin-top:8px"><span class="pill ok">Renovado · vence ' + esc(r.vence) + '</span></div>' + msgBox(r.mensaje);
