@@ -505,7 +505,7 @@ function consultarCuenta() {
           (p.dias < 0 ? '<span style="color:var(--acc)">Vencido hace ' + (-p.dias) + ' días</span>' :
           (p.dias <= 5 ? '<span style="color:var(--warn)">Vence en ' + p.dias + ' días</span>' : 'Te quedan <b>' + p.dias + '</b> días'));
         var full = Math.max(p.full || 0, p.precio);
-        var valor = 'Renovación: ' + (full > p.precio ? '<s class="old">' + pesos(full) + '</s>' : '') + '<b>' + pesos(p.precio) + '</b>';
+        var valor = (full > p.precio ? 'Valor del perfil <s class="old">' + pesos(full) + '</s> · ' : '') + 'Tu precio: <b>' + pesos(p.precio) + '</b>' + (full > p.precio ? ' · ahorras ' + pesos(full - p.precio) : '');
         return '<div class="acc"><pre>' + esc(txt) + '</pre><div class="meta">' + est + (est ? ' · ' : '') + valor + '</div>' +
           (p.caida ? '<div class="warn">⚠️ Esta cuenta está en revisión. Si no te funciona, escríbenos y te la reponemos.</div>' : '') +
           '<button class="copy" onclick="copiar(this.parentNode.querySelector(\'pre\').textContent)">Copiar datos</button></div>';
