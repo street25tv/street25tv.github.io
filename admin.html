@@ -119,6 +119,10 @@ input.pin{width:64px;padding:6px 6px;text-align:center}
 .gimp.warn{border-color:rgba(245,158,11,.45)}.gimp.bad{border-color:rgba(255,61,110,.5)}
 .gopt{display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:14px}.gopt input{margin-top:3px}
 .oculto{display:none!important}
+textarea.in{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px 12px;outline:none;font:inherit;font-size:14px;min-height:120px;resize:vertical}
+textarea.in:focus{border-color:var(--acc2)}
+.mc.env{opacity:.55}.mc .mprev{white-space:pre-wrap;font-size:13px;color:var(--mut);margin-top:8px;max-height:0;overflow:hidden;transition:max-height .2s}.mc.open .mprev{max-height:400px}
+.vars{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.vars button{background:var(--bg2);border:1px dashed var(--line);color:var(--mut);border-radius:8px;padding:3px 8px;font-size:12px;cursor:pointer}
 .cuenta{border-top:1px dashed var(--line);padding-top:8px;margin-top:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .chip{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12px}
@@ -157,7 +161,7 @@ var API_URL = "https://script.google.com/macros/s/AKfycbzRPSLHYnZpNmhsGFux72vykD
 var TOKEN = "", PIN = "", VISTA = "resumen", CACHE = {};
 var TABS = [
   ["resumen", "📊 Resumen"], ["finanzas", "💰 Finanzas"], ["pedidos", "🧾 Pedidos"], ["clientes", "👥 Clientes"], ["vender", "➕ Vender"],
-  ["vencimientos", "⏰ Vencimientos", "⏰ Vencen"], ["inventario", "📦 Inventario"], ["cuentas", "🏦 Cuentas madre", "🏦 Cuentas"], ["garantias", "🛡 Garantías"], ["ajustes", "⚙️ Ajustes"]
+  ["vencimientos", "⏰ Vencimientos", "⏰ Vencen"], ["mensajes", "💬 Mensajes"], ["inventario", "📦 Inventario"], ["cuentas", "🏦 Cuentas madre", "🏦 Cuentas"], ["garantias", "🛡 Garantías"], ["ajustes", "⚙️ Ajustes"]
 ];
 
 // ---------- Utilidades ----------
@@ -493,7 +497,8 @@ function verCliente(tel) {
           '<div class="row"><button class="btn sec sm" onclick="copiar(document.querySelector(\'#f_' + p.fila + ' pre\').textContent)">Copiar datos</button>' +
           '<a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waUrl(c.contacto, p.acceso)) + '">📲 Enviar datos</a>' +
           '<button class="btn sm" onclick="renovarPerfil(' + p.fila + ',this)">🔄 Renovar 30 días' + (p.precio ? " · " + pesos(p.precio) : "") + '</button>' +
-          '<button class="btn sec sm" onclick="garForm(' + p.fila + ')">🛡 Garantía</button></div><div class="res"></div></div>';
+          '<button class="btn sec sm" onclick="garForm(' + p.fila + ')">🛡 Garantía</button>' +
+          '<button class="btn bad sm" onclick="liberarPerfil(' + p.fila + ',this)">🔓 Liberar</button></div><div class="res"></div></div>';
       }).join("");
     $("vista").innerHTML = h;
   }).catch(fallo);
@@ -508,6 +513,20 @@ function renovarPerfil(fila, btn) {
     $("f_" + fila).querySelector(".res").innerHTML = '<div style="margin-top:8px"><span class="pill ok">Renovado · vence ' + esc(r.vence) + '</span></div>' + msgBox(r.mensaje);
     btn.textContent = "✓ Renovado"; toast("Renovado ✓");
   }).catch(function (e) { btn.disabled = false; btn.textContent = "🔄 Renovar 30 días"; $("f_" + fila).querySelector(".res").innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+}
+
+function liberarPerfil(fila, btn) {
+  var c = CACHE.cliente || {}, p = (c.perfiles || []).filter(function (x) { return x.fila === fila; })[0] || {};
+  if (!confirm("¿Liberar el perfil " + (p.perfil || "") + " de " + (p.plataforma || "") + " de " + (c.nombre || "este cliente") + "?\n\nSe borra el cliente del perfil y queda disponible para vender. Queda registrado en Clientes Liberados.")) return;
+  btn.disabled = true; btn.textContent = "Liberando…";
+  var caja = $("f_" + fila);
+  api("adm_liberar", { fila: fila }).then(function (r) {
+    caja.querySelectorAll("button, a.btn").forEach(function (b) { if (b !== btn) b.classList.add("oculto"); });
+    btn.textContent = "✓ Liberado"; toast("Perfil liberado ✓");
+    caja.querySelector(".res").innerHTML = '<div style="margin-top:8px"><span class="pill ok">Perfil libre</span>' +
+      (r.quedan ? ' <span class="mut">· al cliente le quedan ' + r.quedan + (r.quedan === 1 ? ' perfil' : ' perfiles') + '</span>' : ' <span class="mut">· el cliente ya no tiene perfiles</span>') + '</div>' +
+      (r.mensaje ? msgBox(r.mensaje, "Aviso para el cliente (opcional)") : "");
+  }).catch(function (e) { btn.disabled = false; btn.textContent = "🔓 Liberar"; caja.querySelector(".res").innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
 }
 
 // ---------- Vender ----------
@@ -572,12 +591,127 @@ VISTAS.vencimientos = function () {
         return '<div class="card"><div class="row"><b>' + esc(c.nombre) + '</b><span class="mut">' + esc(c.contacto) + '</span><span class="sp"></span>' + diasTxt(c.minDias) + '</div>' +
           '<div class="chips">' + c.perfiles.map(function (p) { return '<span class="chip">' + esc(p.plataforma) + ' · perfil ' + esc(p.perfil) + ' · ' + esc(p.vence) + '</span>'; }).join("") + '</div>' +
           (c.mensaje ? '<div class="row" style="margin-top:10px"><a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waUrl(c.mensaje.tel, c.mensaje.msj)) + '">📲 Enviar recordatorio</a>' +
-            '<button class="btn sec sm" onclick="copiar(CACHE[\'' + id + '\'])">Copiar</button><button class="btn sec sm" onclick="verCliente(\'' + esc(c.contacto) + '\')">Ver / renovar</button></div>' : '<div class="mut">Sin WhatsApp</div>') + '</div>';
+            '<button class="btn sec sm" onclick="copiar(CACHE[\'' + id + '\'])">Copiar</button><button class="btn sec sm" onclick="verCliente(\'' + esc(c.contacto) + '\')">' + (c.minDias < 0 ? 'Renovar / liberar' : 'Ver / renovar') + '</button></div>' : '<div class="mut">Sin WhatsApp</div>') + '</div>';
       }).join("");
     });
     $("vista").innerHTML = h;
   }).catch(fallo);
 };
+
+// ---------- Mensajes ----------
+var MSJ_PLANT = {
+  activos: [
+    ["Aviso general", "Hola {nombre} 👋 Te escribimos de Street25.\n\n(escribe aquí tu aviso)\n\n¡Gracias por estar con nosotros! 🙌"],
+    ["Recordatorio de pago", "Hola {nombre} 👋 Tu perfil de {plataformas} vence el {vence}.\n🔄 Renueva aquí: {tienda}"],
+    ["Promo", "Hola {nombre} 👋 Tenemos promo en Street25 🍿\n\n(escribe aquí la promo)\n\n🛒 Pídela aquí: {tienda}"]
+  ],
+  exclientes: [
+    ["Te extrañamos", "Hola {nombre} 👋 Te extrañamos en Street25 🍿\nSi quieres volver a {plataformas}, escríbenos y te lo activamos en minutos.\n🛒 {tienda}"],
+    ["Promo de regreso", "Hola {nombre} 👋 Tenemos una promo especial para que vuelvas a Street25 🍿\n\n(escribe aquí la promo)\n\n🛒 {tienda}"]
+  ]
+};
+var MSJ_EST = {
+  activos: [["todos", "Todos"], ["aldia", "Al día"], ["pronto", "Vencen en 0–3 días"], ["vencidos", "Vencidos"]],
+  exclientes: [["todos", "Todos"], ["mes", "Último mes"], ["tres", "1–3 meses"], ["viejos", "Más de 3 meses"]]
+};
+function msjEnvLeer() { try { return JSON.parse(sessionStorage.getItem("st25_msj_env") || "{}"); } catch (e) { return {}; } }
+function msjEnvGuardar() { try { sessionStorage.setItem("st25_msj_env", JSON.stringify(CACHE.msjEnv || {})); } catch (e) {} }
+VISTAS.mensajes = function () {
+  cargando("Cargando clientes…");
+  api("adm_msj_datos").then(function (r) {
+    CACHE.msj = r; CACHE.msjEnv = msjEnvLeer();
+    CACHE.mf = CACHE.mf || { grupo: "activos", plat: "", est: "todos" };
+    CACHE.mTxt = CACHE.mTxt || { activos: MSJ_PLANT.activos[0][1], exclientes: MSJ_PLANT.exclientes[0][1] };
+    pintarMsj();
+  }).catch(fallo);
+};
+function pintarMsj() {
+  var r = CACHE.msj, f = CACHE.mf, g = f.grupo;
+  var seg = function (k, t, n) { return '<button class="chipf' + (g === k ? ' on' : '') + '" onclick="msjGrupo(\'' + k + '\')">' + t + ' (' + n + ')</button>'; };
+  $("vista").innerHTML = '<h2>Mensajes</h2><div class="mut" style="margin:-6px 0 12px">Escribe un mensaje, filtra a quién va y envíalo uno por uno por WhatsApp. {nombre} y las demás variables se llenan solas con los datos de cada cliente.</div>' +
+    '<div class="row" style="margin-bottom:10px">' + seg("activos", "👥 Clientes activos", r.activos.length) + seg("exclientes", "💤 Exclientes", r.exclientes.length) + '</div>' +
+    '<div class="card"><div class="f2"><div><label class="f" style="margin-top:0">Plataforma</label><select class="in" id="mPlat" onchange="CACHE.mf.plat=this.value;filtrarMsj()"><option value="">Todas</option>' +
+    r.plataformas.map(function (p) { return '<option' + (f.plat === p ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join("") + '</select></div>' +
+    '<div><label class="f" style="margin-top:0">' + (g === "activos" ? "Estado" : "Última compra") + '</label><select class="in" onchange="CACHE.mf.est=this.value;filtrarMsj()">' +
+    MSJ_EST[g].map(function (e) { return '<option value="' + e[0] + '"' + (f.est === e[0] ? ' selected' : '') + '>' + e[1] + '</option>'; }).join("") + '</select></div></div>' +
+    '<label class="f">Plantilla</label><div class="row">' + MSJ_PLANT[g].map(function (p, i) { return '<button class="btn sec sm" onclick="msjPlantilla(' + i + ')">' + esc(p[0]) + '</button>'; }).join("") + '</div>' +
+    '<label class="f">Mensaje</label><textarea class="in" id="mTxt" oninput="CACHE.mTxt[CACHE.mf.grupo]=this.value;msjAviso();filtrarMsj(true)">' + esc(CACHE.mTxt[g]) + '</textarea>' +
+    '<div class="vars">' + ["{nombre}", "{plataformas}"].concat(g === "activos" ? ["{vence}"] : []).concat(["{tienda}"]).map(function (v) { return '<button onclick="msjVar(\'' + v + '\')">' + v + '</button>'; }).join("") + '</div>' +
+    '<div class="err" id="mAviso"></div></div>' +
+    '<div id="mLista"></div>';
+  msjAviso(); filtrarMsj();
+}
+function msjGrupo(k) { CACHE.mf.grupo = k; CACHE.mf.est = "todos"; pintarMsj(); }
+function msjPlantilla(i) { var t = MSJ_PLANT[CACHE.mf.grupo][i][1]; CACHE.mTxt[CACHE.mf.grupo] = t; $("mTxt").value = t; msjAviso(); filtrarMsj(true); }
+function msjVar(v) {
+  var a = $("mTxt"), i = a.selectionStart || a.value.length, j = a.selectionEnd || i;
+  a.value = a.value.slice(0, i) + v + a.value.slice(j); a.focus(); a.selectionStart = a.selectionEnd = i + v.length;
+  CACHE.mTxt[CACHE.mf.grupo] = a.value; filtrarMsj(true);
+}
+function msjAviso() { var t = CACHE.mTxt[CACHE.mf.grupo] || ""; $("mAviso").textContent = t.indexOf("(escribe") !== -1 ? "✏️ Completa la parte que dice “(escribe…)” antes de enviar." : (!t.trim() ? "Escribe un mensaje." : ""); }
+function msjFiltrados() {
+  var r = CACHE.msj, f = CACHE.mf, pl = f.plat;
+  if (f.grupo === "activos") return r.activos.map(function (c) {
+    var ps = pl ? c.perfiles.filter(function (p) { return p.plataforma === pl; }) : c.perfiles;
+    if (!ps.length) return null;
+    var min = ps.reduce(function (m, p) { return p.dias !== null && (m === null || p.dias < m) ? p.dias : m; }, null);
+    if (f.est === "aldia" && !(min !== null && min > 3)) return null;
+    if (f.est === "pronto" && !(min !== null && min >= 0 && min <= 3)) return null;
+    if (f.est === "vencidos" && !(min !== null && min < 0)) return null;
+    return { c: c, ps: ps, min: min };
+  }).filter(Boolean);
+  return r.exclientes.filter(function (c) {
+    if (pl && c.plataformas.indexOf(pl) === -1) return false;
+    if (f.est === "mes") return c.diasSin <= 30;
+    if (f.est === "tres") return c.diasSin > 30 && c.diasSin <= 90;
+    if (f.est === "viejos") return c.diasSin > 90;
+    return true;
+  }).map(function (c) { return { c: c }; });
+}
+function msjNombre(n) { var s = String(n || "").trim().split(/\s+/)[0] || ""; return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ""; }
+function msjLista(a) { a = a.filter(function (x, i) { return a.indexOf(x) === i; }); return a.length > 1 ? a.slice(0, -1).join(", ") + " y " + a[a.length - 1] : (a[0] || ""); }
+function msjTexto(x) {
+  var g = CACHE.mf.grupo, plats, vence = "";
+  if (g === "activos") {
+    plats = x.ps.map(function (p) { return p.plataforma; });
+    var pm = x.ps.filter(function (p) { return p.dias === x.min; })[0]; vence = pm ? pm.vence : "";
+  } else plats = CACHE.mf.plat ? [CACHE.mf.plat] : x.c.plataformas;
+  return (CACHE.mTxt[g] || "").replace(/\{nombre\}/g, msjNombre(x.c.nombre)).replace(/\{plataformas\}/g, msjLista(plats))
+    .replace(/\{vence\}/g, vence).replace(/\{tienda\}/g, "https://" + CACHE.msj.tienda);
+}
+function filtrarMsj(soloTexto) {
+  var l = msjFiltrados(), g = CACHE.mf.grupo, env = CACHE.msjEnv || {};
+  CACHE.mItems = l;
+  if (soloTexto && $("mLista").children.length) {
+    l.forEach(function (x, i) { var e = $("mp_" + i); if (e) e.textContent = msjTexto(x); });
+    return;
+  }
+  var n = l.filter(function (x) { return env[g + x.c.tel]; }).length;
+  $("mLista").innerHTML = '<div class="row" style="margin:4px 4px 8px"><span class="mut">' + l.length + (l.length === 1 ? ' cliente' : ' clientes') + ' · enviados ' + n + '</span><span class="sp"></span>' +
+    (n ? '<button class="btn sec sm" onclick="msjReiniciar()">Reiniciar enviados</button>' : '') + '</div>' +
+    (l.length ? l.map(function (x, i) {
+      var c = x.c, info;
+      if (g === "activos") info = '<div class="chips">' + x.ps.map(function (p) { return '<span class="chip">' + esc(p.plataforma) + ' · perfil ' + esc(p.perfil) + (p.vence ? ' · ' + esc(p.vence) : '') + '</span>'; }).join("") + '</div>';
+      else info = '<div class="mut" style="margin-top:4px">Última compra ' + esc(c.ultima) + ' (hace ' + c.diasSin + ' d) · ' + esc(c.plataformas.join(", ")) + ' · ' + c.pagos + (c.pagos === 1 ? ' pago' : ' pagos') + ' · ' + pesos(c.total) + '</div>';
+      return '<div class="card mc' + (env[g + c.tel] ? ' env' : '') + '" id="mc_' + i + '"><div class="row"><b>' + esc(c.nombre) + '</b><span class="mut">' + esc(c.tel) + '</span><span class="sp"></span>' +
+        (g === "activos" ? diasTxt(x.min) : '') + (env[g + c.tel] ? '<span class="pill ok">enviado</span>' : '') + '</div>' + info +
+        '<div class="mprev" id="mp_' + i + '">' + esc(msjTexto(x)) + '</div>' +
+        '<div class="row" style="margin-top:10px"><button class="btn wa sm" onclick="msjEnviar(' + i + ')">📲 Enviar</button>' +
+        '<button class="btn sec sm" onclick="$(\'mc_' + i + '\').classList.toggle(\'open\')">Ver mensaje</button>' +
+        (g === "activos" ? '<button class="btn sec sm" onclick="verCliente(\'' + esc(c.tel) + '\')">Ver cliente</button>' : '') + '</div></div>';
+    }).join("") : '<div class="card empty">Nadie cumple esos filtros</div>');
+}
+function msjEnviar(i) {
+  var x = CACHE.mItems[i], t = msjTexto(x);
+  if (!t.trim()) return toast("Escribe un mensaje primero");
+  if (t.indexOf("(escribe") !== -1) return alert("Completa la parte que dice “(escribe…)” antes de enviar.");
+  window.open(waUrl(x.c.tel, t), "_blank", "noopener");
+  CACHE.msjEnv[CACHE.mf.grupo + x.c.tel] = 1; msjEnvGuardar(); filtrarMsj();
+}
+function msjReiniciar() {
+  var g = CACHE.mf.grupo; Object.keys(CACHE.msjEnv).forEach(function (k) { if (k.indexOf(g) === 0) delete CACHE.msjEnv[k]; });
+  msjEnvGuardar(); filtrarMsj();
+}
 
 // ---------- Inventario ----------
 VISTAS.inventario = function () {
