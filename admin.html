@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0b0b12">
+<title>Street25 · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0b12;--bg2:#12121c;--card:#171724;--line:#262636;--txt:#f3f3f7;--mut:#9a9ab0;--acc:#ff3d6e;--acc2:#7b5cff;--ok:#22c55e;--warn:#f59e0b;--rad:14px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:Poppins,system-ui,sans-serif;font-size:15px}
+button,input,select{font-family:inherit;font-size:inherit}
+a{color:#7dd3fc}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px}
+header{position:sticky;top:0;z-index:20;background:rgba(11,11,18,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;gap:10px;height:58px}
+.logo{font-weight:800;font-size:20px;letter-spacing:.5px}
+.logo span{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{font-size:11px;border:1px solid var(--line);color:var(--mut);padding:2px 8px;border-radius:999px}
+.hsp{flex:1}
+.ibtn{background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:7px 11px;cursor:pointer}
+nav.tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 0 12px;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{flex:0 0 auto;background:var(--card);border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:8px 14px;cursor:pointer;white-space:nowrap;position:relative}
+nav.tabs button.on{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#fff;border-color:transparent}
+nav.tabs .b{display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:999px;background:var(--acc);color:#fff;font-size:11px;line-height:18px;text-align:center}
+nav.tabs button.on .b{background:#fff;color:var(--acc)}
+main{padding-bottom:60px}
+h2{font-size:18px;margin:6px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);padding:14px;cursor:default}
+.kpi.click{cursor:pointer}
+.kpi b{display:block;font-size:26px;font-weight:700;line-height:1.1}
+.kpi small{color:var(--mut);font-size:12px}
+.kpi.alerta b{color:var(--acc)}.kpi.aviso b{color:var(--warn)}.kpi.bien b{color:var(--ok)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);padding:14px;margin-bottom:10px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.row .sp{flex:1}
+.mut{color:var(--mut);font-size:13px}
+.pill{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid var(--line);color:var(--mut)}
+.pill.ok{color:var(--ok);border-color:rgba(34,197,94,.4)}.pill.warn{color:var(--warn);border-color:rgba(245,158,11,.4)}.pill.bad{color:var(--acc);border-color:rgba(255,61,110,.45)}
+.btn{border:0;border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:600;background:var(--acc2);color:#fff;text-decoration:none;display:inline-block}
+.btn.sec{background:transparent;border:1px solid var(--line);color:var(--txt);font-weight:500}
+.btn.ok{background:var(--ok);color:#06210f}.btn.bad{background:transparent;border:1px solid var(--acc);color:var(--acc)}
+.btn.wa{background:#25d366;color:#05250f}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sm{padding:6px 10px;font-size:13px}
+input.in,select.in{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px 12px;outline:none}
+input.in:focus,select.in:focus{border-color:var(--acc2)}
+label.f{display:block;font-size:13px;color:var(--mut);margin:10px 0 5px}
+pre.acc{white-space:pre-wrap;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0;font:inherit;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--mut);font-weight:500;font-size:12px}
+.bar{height:8px;background:var(--bg2);border-radius:999px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc2),var(--acc))}
+.empty{color:var(--mut);text-align:center;padding:26px 10px}
+.load{color:var(--mut);padding:20px 0;text-align:center}
+.err{color:var(--acc);font-size:14px;margin-top:8px}
+.stats{white-space:pre-wrap;line-height:1.5;font-size:14px}
+.msg{background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.35);border-radius:12px;padding:12px;margin-top:10px}
+.msg pre{white-space:pre-wrap;font:inherit;font-size:13px;margin:6px 0 10px;max-height:260px;overflow:auto}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#111;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:600;z-index:90;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+/* Login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.lbox{width:100%;max-width:340px;text-align:center}
+.lbox .logo{font-size:30px;margin-bottom:4px}
+.dots{display:flex;justify-content:center;gap:14px;margin:26px 0 8px}
+.dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);display:block}
+.dots i.on{background:var(--acc);border-color:var(--acc)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.pad button{height:62px;border-radius:16px;background:var(--card);border:1px solid var(--line);color:var(--txt);font-size:22px;font-weight:600;cursor:pointer}
+.pad button:active{background:var(--line)}
+.pad .x{font-size:15px;color:var(--mut)}
+.lerr{min-height:22px;color:var(--acc);font-size:14px}
+.shake{animation:sh .35s}
+@keyframes sh{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.oculto{display:none!important}
+.cuenta{border-top:1px dashed var(--line);padding-top:8px;margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12px}
+.lin{display:grid;grid-template-columns:1fr 70px 110px 34px;gap:6px;align-items:center;margin-bottom:6px}
+@media (max-width:520px){.lin{grid-template-columns:1fr 56px 86px 30px}td,th{font-size:13px}}
+</style>
+</head>
+<body>
+
+<section id="login">
+  <div class="lbox">
+    <div class="logo">STREET<span>25</span></div>
+    <div class="mut">Panel administrativo</div>
+    <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+    <div class="lerr" id="lerr"></div>
+    <div class="pad" id="pad"></div>
+  </div>
+</section>
+
+<section id="app" class="oculto">
+  <header><div class="wrap">
+    <div class="logo">STREET<span>25</span></div><span class="tag">Admin</span>
+    <div class="hsp"></div>
+    <button class="ibtn" onclick="recargar()" title="Actualizar">⟳</button>
+    <button class="ibtn" onclick="salir()">Salir</button>
+  </div></header>
+  <main class="wrap">
+    <nav class="tabs" id="tabs"></nav>
+    <div id="vista"></div>
+  </main>
+</section>
+<div class="toast" id="toast"></div>
+
+<script>
+var API_URL = "https://script.google.com/macros/s/AKfycbzRPSLHYnZpNmhsGFux72vykDAjs8ORUZd1qDKn4gxAU16Xh4SqdxLItfl1jHOeC6hW/exec";
+var TOKEN = "", PIN = "", VISTA = "resumen", CACHE = {};
+var TABS = [
+  ["resumen", "📊 Resumen"], ["pedidos", "🧾 Pedidos"], ["clientes", "👥 Clientes"], ["vender", "➕ Vender"],
+  ["vencimientos", "⏰ Vencimientos"], ["inventario", "📦 Inventario"], ["cuentas", "🏦 Cuentas madre"], ["ajustes", "⚙️ Ajustes"]
+];
+
+// ---------- Utilidades ----------
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+function pesos(n) { return "$" + Math.round(Number(n) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+function toast(t) { var e = $("toast"); e.textContent = t; e.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(function () { e.classList.remove("show"); }, 1800); }
+function copiar(t) {
+  var ok = function () { toast("Copiado ✓"); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, function () { window.prompt("Copia:", t); });
+  else window.prompt("Copia:", t);
+}
+function waUrl(tel, msj) { return "https://wa.me/57" + String(tel).replace(/\D/g, "").slice(-10) + (msj ? "?text=" + encodeURIComponent(msj) : ""); }
+function guardarSes(v) { try { if (v) sessionStorage.setItem("st25_adm", v); else sessionStorage.removeItem("st25_adm"); } catch (e) {} }
+function leerSes() { try { return sessionStorage.getItem("st25_adm") || ""; } catch (e) { return ""; } }
+function diasTxt(d) {
+  if (d === null || d === undefined) return '<span class="pill">sin fecha</span>';
+  if (d < 0) return '<span class="pill bad">vencido hace ' + (-d) + ' d</span>';
+  if (d === 0) return '<span class="pill bad">vence hoy</span>';
+  if (d <= 3) return '<span class="pill warn">vence en ' + d + ' d</span>';
+  return '<span class="pill ok">' + d + ' días</span>';
+}
+// Llamadas al servidor: siempre POST (el token nunca va en la dirección)
+function api(accion, datos) {
+  var cuerpo = Object.assign({ accion: accion, token: TOKEN }, datos || {});
+  var intento = function (n) {
+    return fetch(API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(cuerpo) })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .catch(function (e) { if (n < 2 && /HTTP 4|HTTP 5|Failed|NetworkError|Load failed/i.test(String(e.message))) return new Promise(function (ok) { setTimeout(ok, 1500 * (n + 1)); }).then(function () { return intento(n + 1); }); throw e; });
+  };
+  return intento(0).then(function (r) {
+    if (r && r.error === "SESION_VENCIDA") { cerrarSesion("Tu sesión venció. Entra de nuevo."); throw new Error("Sesión vencida"); }
+    if (!r || r.error) throw new Error((r && r.error) || "Sin respuesta del servidor");
+    return r;
+  });
+}
+function msgBox(m, titulo) {
+  if (!m || !m.msj) return "";
+  var id = "m" + Math.random().toString(36).slice(2, 8);
+  CACHE[id] = m.msj;
+  return '<div class="msg"><b>' + esc(titulo || "Mensaje para el cliente") + '</b> <span class="mut">· ' + esc(m.tel) + '</span><pre>' + esc(m.msj) + '</pre>' +
+    '<div class="row"><a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waUrl(m.tel, m.msj)) + '">📲 Enviar por WhatsApp</a>' +
+    '<button class="btn sec sm" onclick="copiar(CACHE[\'' + id + '\'])">Copiar</button></div></div>';
+}
+
+// ---------- Ingreso ----------
+function pintarPad() {
+  var t = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "x", "0", "<"];
+  $("pad").innerHTML = t.map(function (k) {
+    if (k === "x") return '<button class="x" onclick="PIN=\'\';pintarDots()">Borrar</button>';
+    if (k === "<") return '<button class="x" onclick="PIN=PIN.slice(0,-1);pintarDots()">⌫</button>';
+    return '<button onclick="tecla(\'' + k + '\')">' + k + '</button>';
+  }).join("");
+}
+function pintarDots() { var d = $("dots").children; for (var i = 0; i < d.length; i++) d[i].classList.toggle("on", i < PIN.length); }
+function tecla(k) {
+  if (PIN.length >= 4 || tecla.ocupado) return;
+  PIN += k; pintarDots(); $("lerr").textContent = "";
+  if (PIN.length === 4) entrar();
+}
+document.addEventListener("keydown", function (e) {
+  if ($("login").classList.contains("oculto")) return;
+  if (/^\d$/.test(e.key)) tecla(e.key);
+  else if (e.key === "Backspace") { PIN = PIN.slice(0, -1); pintarDots(); }
+});
+function entrar() {
+  tecla.ocupado = true; $("lerr").textContent = "Verificando…";
+  api("adm_login", { pin: PIN }).then(function (r) {
+    TOKEN = r.token; guardarSes(TOKEN); PIN = ""; pintarDots();
+    $("login").classList.add("oculto"); $("app").classList.remove("oculto");
+    ir("resumen");
+  }).catch(function (e) {
+    PIN = ""; pintarDots(); $("lerr").textContent = e.message;
+    var b = $("dots"); b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake");
+  }).then(function () { tecla.ocupado = false; });
+}
+function cerrarSesion(t) {
+  TOKEN = ""; guardarSes(""); $("app").classList.add("oculto"); $("login").classList.remove("oculto");
+  $("lerr").textContent = t || ""; PIN = ""; pintarDots();
+}
+function salir() { var t = TOKEN; if (t) api("adm_salir", {}).catch(function () {}); cerrarSesion("Sesión cerrada."); }
+
+// ---------- Navegación ----------
+function pintarTabs(badges) {
+  badges = badges || pintarTabs.b || {}; pintarTabs.b = badges;
+  $("tabs").innerHTML = TABS.map(function (t) {
+    var b = badges[t[0]] ? '<span class="b">' + badges[t[0]] + '</span>' : "";
+    return '<button class="' + (t[0] === VISTA ? "on" : "") + '" onclick="ir(\'' + t[0] + '\')">' + t[1] + b + '</button>';
+  }).join("");
+}
+function ir(v) { VISTA = v; pintarTabs(); window.scrollTo(0, 0); VISTAS[v](); }
+function recargar() { ir(VISTA); }
+function cargando(t) { $("vista").innerHTML = '<div class="load">' + esc(t || "Cargando…") + '</div>'; }
+function fallo(e) { $("vista").innerHTML = '<div class="card"><div class="err">⚠️ ' + esc(e && e.message ? e.message : e) + '</div><button class="btn sec sm" style="margin-top:10px" onclick="recargar()">Reintentar</button></div>'; }
+
+var VISTAS = {};
+
+// ---------- Resumen ----------
+VISTAS.resumen = function () {
+  cargando();
+  api("adm_resumen").then(function (r) {
+    pintarTabs({ pedidos: r.pendientes, vencimientos: r.venceHoy + r.prox3 + r.vencidos });
+    var k = function (n, t, cls, dest) { return '<div class="kpi ' + (cls || "") + (dest ? " click" : "") + '"' + (dest ? ' onclick="ir(\'' + dest + '\')"' : "") + '><b>' + n + '</b><small>' + t + '</small></div>'; };
+    var h = '<h2>Hoy · <span class="mut">' + esc(r.hora) + '</span></h2><div class="grid">' +
+      k(r.pendientes, "Pedidos por revisar", r.pendientes ? "alerta" : "bien", "pedidos") +
+      k(r.venceHoy, "Vencen hoy", r.venceHoy ? "alerta" : "", "vencimientos") +
+      k(r.prox3, "Vencen en 1–3 días", r.prox3 ? "aviso" : "", "vencimientos") +
+      k(r.vencidos, "Vencidos sin renovar", r.vencidos ? "alerta" : "", "vencimientos") +
+      k(r.clientes, "Clientes activos", "", "clientes") +
+      k(r.activos, "Perfiles vendidos", "", "clientes") +
+      k(r.libres, "Perfiles libres", r.libres ? "bien" : "alerta", "inventario") +
+      k(r.cmPorVencer, "Cuentas madre por vencer (≤5 d)", r.cmPorVencer ? "aviso" : "", "cuentas") +
+      (r.cmCaidas ? k(r.cmCaidas, "Cuentas madre caídas", "alerta", "cuentas") : "") +
+      '</div><h2 style="margin-top:20px">Ocupación por plataforma</h2><div class="card">' +
+      r.plataformas.map(function (p) {
+        var tot = p.libres + p.ocupados, pct = tot ? Math.round(p.ocupados * 100 / tot) : 0;
+        return '<div style="margin-bottom:12px"><div class="row"><b>' + esc(p.plataforma) + '</b><span class="sp"></span><span class="mut">' + p.ocupados + '/' + tot + ' vendidos · </span>' +
+          (p.libres ? '<span class="pill ok">' + p.libres + ' libres</span>' : '<span class="pill bad">agotado</span>') + '</div><div class="bar"><i style="width:' + pct + '%"></i></div></div>';
+      }).join("") + '</div><h2 style="margin-top:20px">Estadísticas</h2><div class="card"><div class="stats" id="stats">Cargando…</div></div>';
+    $("vista").innerHTML = h;
+    api("adm_stats").then(function (s) { if ($("stats")) $("stats").innerHTML = limpiarHtml(s.html); }).catch(function (e) { if ($("stats")) $("stats").textContent = e.message; });
+  }).catch(fallo);
+};
+// Solo deja pasar <b>, <i>, <code> y <br> del texto del servidor
+function limpiarHtml(h) {
+  return esc(String(h || "")).replace(/&lt;(\/?)(b|i|code|u)&gt;/g, "<$1$2>").replace(/&lt;br\s*\/?&gt;/g, "<br>");
+}
+
+// ---------- Pedidos ----------
+VISTAS.pedidos = function () {
+  cargando();
+  api("adm_pedidos").then(function (r) {
+    pintarTabs(Object.assign({}, pintarTabs.b, { pedidos: r.pendientes.length }));
+    var h = '<h2>Por revisar (' + r.pendientes.length + ')</h2>';
+    h += r.pendientes.length ? r.pendientes.map(function (o) {
+      return '<div class="card" id="p_' + esc(o.id) + '"><div class="row"><b>' + (o.tipo === "renovacion" ? "🔄 Renovación" : "🛒 Compra") + ' ' + esc(o.id) + '</b><span class="sp"></span><span class="mut">' + esc(o.fecha) + '</span></div>' +
+        '<div style="margin-top:6px">👤 ' + esc(o.nombre) + ' · <a target="_blank" rel="noopener" href="' + esc(waUrl(o.contacto)) + '">' + esc(o.contacto) + '</a></div>' +
+        '<div class="mut" style="margin-top:4px">' + esc(o.detalle) + '</div>' +
+        '<div style="margin-top:6px;font-size:18px"><b>' + pesos(o.total) + '</b></div>' +
+        '<div class="mut" style="margin-top:4px">El comprobante y la revisión automática están en Telegram. Confirma que el dinero llegó antes de aprobar.</div>' +
+        '<div class="row" style="margin-top:10px"><button class="btn ok" onclick="resolver(\'' + esc(o.id) + '\',true,this)">✅ Pago recibido — ' + (o.tipo === "renovacion" ? "renovar" : "entregar") + '</button>' +
+        '<button class="btn bad" onclick="resolver(\'' + esc(o.id) + '\',false,this)">❌ Rechazar</button></div><div class="res"></div></div>';
+    }).join("") : '<div class="card empty">No hay pedidos pendientes 🎉</div>';
+    h += '<h2 style="margin-top:20px">Últimos pedidos</h2><div class="card" style="overflow-x:auto"><table><tr><th>Pedido</th><th>Cliente</th><th>Total</th><th>Estado</th></tr>' +
+      (r.recientes.length ? r.recientes.map(function (o) {
+        var cls = /entregado/i.test(o.estado) ? "ok" : (/rechaz|sin stock/i.test(o.estado) ? "bad" : "warn");
+        return '<tr><td>' + esc(o.id) + '<div class="mut">' + esc(o.fecha) + '</div></td><td>' + esc(o.nombre) + '<div class="mut">' + esc(o.detalle) + '</div></td><td>' + pesos(o.total) + '</td><td><span class="pill ' + cls + '">' + esc(o.estado) + '</span></td></tr>';
+      }).join("") : '<tr><td colspan="4" class="empty">Sin pedidos</td></tr>') + '</table></div>';
+    $("vista").innerHTML = h;
+  }).catch(fallo);
+};
+function resolver(id, aprobar, btn) {
+  if (!aprobar && !confirm("¿Rechazar el pedido " + id + "?")) return;
+  if (aprobar && !confirm("¿Confirmas que el pago del pedido " + id + " llegó a tu cuenta?")) return;
+  var card = $("p_" + id), botones = card.querySelectorAll("button");
+  for (var i = 0; i < botones.length; i++) botones[i].disabled = true;
+  btn.textContent = "Procesando…";
+  api("adm_resolver", { id: id, aprobar: aprobar }).then(function (r) {
+    var h = '<div style="margin-top:10px"><span class="pill ' + (/entregado/i.test(r.estado) ? "ok" : "warn") + '">' + esc(r.estado) + '</span></div>';
+    (r.mensajes || []).forEach(function (m, i) { h += msgBox(m, i === 0 ? "Mensaje para el cliente" : "Mensaje para quien lo refirió"); });
+    card.querySelector(".res").innerHTML = h;
+    card.querySelector(".row:last-of-type") && (btn.parentNode.style.display = "none");
+    toast(aprobar ? "Pedido procesado ✓" : "Pedido rechazado");
+  }).catch(function (e) {
+    for (var i = 0; i < botones.length; i++) botones[i].disabled = false;
+    btn.textContent = aprobar ? "✅ Reintentar" : "❌ Rechazar";
+    card.querySelector(".res").innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+  });
+}
+
+// ---------- Clientes ----------
+VISTAS.clientes = function () {
+  $("vista").innerHTML = '<h2>Clientes</h2><div class="card"><input class="in" id="cq" placeholder="Buscar por nombre o WhatsApp" autocomplete="off" oninput="filtrarClientes()"></div><div id="clista"><div class="load">Cargando…</div></div>';
+  api("adm_clientes", { q: "" }).then(function (r) { CACHE.clientes = r.clientes; filtrarClientes(); }).catch(function (e) { $("clista").innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+};
+function normTxt(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+function filtrarClientes() {
+  var q = normTxt($("cq") ? $("cq").value.trim() : ""), qd = q.replace(/\D/g, "");
+  var l = (CACHE.clientes || []).filter(function (c) { return !q || normTxt(c.nombre).indexOf(q) !== -1 || (qd.length >= 3 && c.contacto.indexOf(qd) !== -1); });
+  $("clista").innerHTML = '<div class="mut" style="margin:0 0 8px 4px">' + l.length + ' clientes</div>' + (l.length ? l.map(function (c) {
+    return '<div class="card" style="cursor:pointer" onclick="verCliente(\'' + esc(c.contacto) + '\')"><div class="row"><b>' + esc(c.nombre) + '</b><span class="sp"></span>' + diasTxt(c.minDias) + '</div>' +
+      '<div class="mut" style="margin-top:4px">' + esc(c.contacto || "sin WhatsApp") + ' · ' + c.perfiles + (c.perfiles === 1 ? ' perfil' : ' perfiles') + ' · ' + esc(c.plataformas.join(", ")) + '</div></div>';
+  }).join("") : '<div class="card empty">Sin resultados</div>');
+}
+function verCliente(tel) {
+  if (!tel) return toast("Este cliente no tiene WhatsApp registrado");
+  VISTA = "clientes"; pintarTabs(); window.scrollTo(0, 0);
+  cargando("Cargando cliente…");
+  api("adm_cliente", { contacto: tel }).then(function (c) {
+    CACHE.cliente = c;
+    var h = '<div class="row" style="margin-bottom:10px"><button class="btn sec sm" onclick="ir(\'clientes\')">← Clientes</button></div>' +
+      '<div class="card"><div class="row"><h2 style="margin:0">' + esc(c.nombre) + '</h2><span class="sp"></span><a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waUrl(c.contacto)) + '">💬 ' + esc(c.contacto) + '</a></div>' +
+      '<div class="row" style="margin-top:10px"><span class="mut">🔐 Código de acceso:</span> <b>' + (c.codigo ? esc(c.codigo) : "sin código") + '</b>' +
+      '<button class="btn sec sm" onclick="enviarCodigo(\'' + esc(c.contacto) + '\')">' + (c.codigo ? "Enviar código" : "Crear y enviar código") + '</button></div>' +
+      (c.saldo ? '<div class="mut" style="margin-top:6px">💳 Saldo por referidos: <b>' + pesos(c.saldo) + '</b></div>' : "") +
+      '<div id="cmsg"></div></div>' +
+      '<h2 style="margin-top:16px">Perfiles (' + c.perfiles.length + ')</h2>' +
+      c.perfiles.map(function (p) {
+        return '<div class="card" id="f_' + p.fila + '"><div class="row"><b>' + esc(p.plataforma) + (p.tipo && !/normal/i.test(p.tipo) ? " " + esc(p.tipo) : "") + '</b><span class="mut">perfil ' + esc(p.perfil) + '</span><span class="sp"></span>' + diasTxt(p.dias) + '</div>' +
+          (p.caida ? '<div class="err">⚠️ Cuenta madre marcada como caída</div>' : '') +
+          '<pre class="acc">' + esc(p.acceso) + '</pre>' +
+          '<div class="row"><button class="btn sec sm" onclick="copiar(document.querySelector(\'#f_' + p.fila + ' pre\').textContent)">Copiar datos</button>' +
+          '<a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waUrl(c.contacto, p.acceso)) + '">📲 Enviar datos</a>' +
+          '<button class="btn sm" onclick="renovarPerfil(' + p.fila + ',this)">🔄 Renovar 30 días' + (p.precio ? " · " + pesos(p.precio) : "") + '</button></div><div class="res"></div></div>';
+      }).join("");
+    $("vista").innerHTML = h;
+  }).catch(fallo);
+}
+function enviarCodigo(tel) {
+  api("adm_codigo", { contacto: tel }).then(function (r) { $("cmsg").innerHTML = msgBox(r.mensaje, "Mensaje con el código"); }).catch(function (e) { $("cmsg").innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+}
+function renovarPerfil(fila, btn) {
+  if (!confirm("¿Ya recibiste el pago? Se sumarán 30 días a este perfil.")) return;
+  btn.disabled = true; btn.textContent = "Renovando…";
+  api("adm_renovar", { fila: fila }).then(function (r) {
+    $("f_" + fila).querySelector(".res").innerHTML = '<div style="margin-top:8px"><span class="pill ok">Renovado · vence ' + esc(r.vence) + '</span></div>' + msgBox(r.mensaje);
+    btn.textContent = "✓ Renovado"; toast("Renovado ✓");
+  }).catch(function (e) { btn.disabled = false; btn.textContent = "🔄 Renovar 30 días"; $("f_" + fila).querySelector(".res").innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+}
+
+// ---------- Vender ----------
+VISTAS.vender = function () {
+  cargando();
+  api("adm_inventario").then(function (r) {
+    CACHE.plats = r.plataformas.filter(function (p) { return p.libres > 0; });
+    if (!CACHE.plats.length) { $("vista").innerHTML = '<h2>Nueva venta</h2><div class="card empty">No hay perfiles libres. Carga perfiles en el Inventario.</div>'; return; }
+    $("vista").innerHTML = '<h2>Nueva venta</h2><div class="card">' +
+      '<label class="f">Nombre del cliente</label><input class="in" id="vNom" maxlength="60" placeholder="Ej: Luis Carlos">' +
+      '<label class="f">WhatsApp</label><input class="in" id="vWa" maxlength="13" inputmode="numeric" placeholder="Ej: 3001234567">' +
+      '<label class="f">Perfiles <span class="mut">(cantidad y precio; deja el precio vacío para usar el del inventario)</span></label><div id="vLineas"></div>' +
+      '<button class="btn sec sm" onclick="agregarLinea()">＋ Otra plataforma</button>' +
+      '<div class="err" id="vErr"></div>' +
+      '<div class="row" style="margin-top:14px"><button class="btn" id="vBtn" onclick="vender()">Registrar venta</button><span class="mut">El sistema asigna los perfiles libres y arma el mensaje con los accesos y el código.</span></div>' +
+      '<div id="vRes"></div></div>';
+    agregarLinea();
+  }).catch(fallo);
+};
+function agregarLinea() {
+  var d = document.createElement("div"); d.className = "lin";
+  d.innerHTML = '<select class="in">' + CACHE.plats.map(function (p, i) { return '<option value="' + i + '">' + esc(p.plataforma) + ' (' + p.libres + ' libres)</option>'; }).join("") + '</select>' +
+    '<input class="in" type="number" min="1" max="10" value="1">' +
+    '<input class="in" inputmode="numeric" placeholder="Precio">' +
+    '<button class="btn sec sm" title="Quitar" onclick="this.parentNode.remove()">✕</button>';
+  $("vLineas").appendChild(d);
+}
+function vender() {
+  var nom = $("vNom").value.trim(), wa = $("vWa").value.replace(/\D/g, "");
+  if (wa.length === 12 && wa.indexOf("57") === 0) wa = wa.slice(2);
+  var err = function (t) { $("vErr").textContent = t; };
+  if (nom.length < 2) return err("Escribe el nombre del cliente.");
+  if (wa.length !== 10) return err("Escribe un WhatsApp de 10 dígitos.");
+  var items = [], lineas = $("vLineas").querySelectorAll(".lin");
+  for (var i = 0; i < lineas.length; i++) {
+    var c = lineas[i].querySelectorAll(".in"), p = CACHE.plats[Number(c[0].value)], cant = Math.floor(Number(c[1].value) || 0);
+    if (!p || cant < 1) continue;
+    if (cant > p.libres) return err("Solo hay " + p.libres + " libres de " + p.plataforma + ".");
+    items.push({ plataforma: p.base, tipo: p.tipo, cant: cant, precio: c[2].value.replace(/\D/g, "") });
+  }
+  if (!items.length) return err("Agrega al menos un perfil.");
+  if (!confirm("¿Registrar la venta a " + nom + " (" + wa + ")?")) return;
+  err(""); var b = $("vBtn"); b.disabled = true; b.textContent = "Registrando…";
+  api("adm_vender", { nombre: nom, contacto: wa, items: items }).then(function (r) {
+    $("vRes").innerHTML = '<div style="margin-top:12px"><span class="pill ok">' + r.hechos + (r.hechos === 1 ? " perfil asignado" : " perfiles asignados") + '</span>' +
+      (r.fallos.length ? ' <span class="pill bad">Sin cupo: ' + esc(r.fallos.join(", ")) + '</span>' : '') + '</div>' + msgBox(r.mensaje, "Bienvenida con accesos");
+    b.textContent = "✓ Venta registrada"; toast("Venta registrada ✓");
+  }).catch(function (e) { b.disabled = false; b.textContent = "Registrar venta"; err(e.message); });
+}
+
+// ---------- Vencimientos ----------
+VISTAS.vencimientos = function () {
+  cargando();
+  api("adm_vencimientos").then(function (r) {
+    var grupos = [["Vencidos (últimos 7 días)", function (c) { return c.minDias < 0; }], ["Vencen hoy", function (c) { return c.minDias === 0; }], ["Vencen en 1–3 días", function (c) { return c.minDias > 0; }]];
+    var h = '<h2>Vencimientos</h2><div class="mut" style="margin:-6px 0 12px">Cada cliente trae su recordatorio listo. Toca “Enviar” y se abre WhatsApp con el mensaje.</div>';
+    if (!r.clientes.length) h += '<div class="card empty">Nadie vence en los próximos 3 días 🎉</div>';
+    grupos.forEach(function (g) {
+      var l = r.clientes.filter(g[1]); if (!l.length) return;
+      h += '<h2 style="margin-top:16px">' + g[0] + ' (' + l.length + ')</h2>' + l.map(function (c, i) {
+        var id = "v" + g[0].length + "_" + i; CACHE[id] = c.mensaje ? c.mensaje.msj : "";
+        return '<div class="card"><div class="row"><b>' + esc(c.nombre) + '</b><span class="mut">' + esc(c.contacto) + '</span><span class="sp"></span>' + diasTxt(c.minDias) + '</div>' +
+          '<div class="chips">' + c.perfiles.map(function (p) { return '<span class="chip">' + esc(p.plataforma) + ' · perfil ' + esc(p.perfil) + ' · ' + esc(p.vence) + '</span>'; }).join("") + '</div>' +
+          (c.mensaje ? '<div class="row" style="margin-top:10px"><a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waUrl(c.mensaje.tel, c.mensaje.msj)) + '">📲 Enviar recordatorio</a>' +
+            '<button class="btn sec sm" onclick="copiar(CACHE[\'' + id + '\'])">Copiar</button><button class="btn sec sm" onclick="verCliente(\'' + esc(c.contacto) + '\')">Ver / renovar</button></div>' : '<div class="mut">Sin WhatsApp</div>') + '</div>';
+      }).join("");
+    });
+    $("vista").innerHTML = h;
+  }).catch(fallo);
+};
+
+// ---------- Inventario ----------
+VISTAS.inventario = function () {
+  cargando();
+  api("adm_inventario").then(function (r) {
+    var libres = r.plataformas.reduce(function (s, p) { return s + p.libres; }, 0);
+    $("vista").innerHTML = '<h2>Inventario · ' + libres + ' perfiles libres</h2>' + r.plataformas.map(function (p) {
+      return '<div class="card"><div class="row"><b>' + esc(p.plataforma) + '</b><span class="sp"></span><span class="mut">' + p.ocupados + ' vendidos · </span>' +
+        (p.libres ? '<span class="pill ok">' + p.libres + ' libres</span>' : '<span class="pill bad">agotado</span>') + '</div>' +
+        p.cuentas.map(function (c) {
+          return '<div class="cuenta"><div class="row"><span>📧 ' + esc(c.nombre) + '</span>' + (c.caida ? '<span class="pill bad">caída</span>' : '') + '<span class="sp"></span><span class="mut">' + c.perfiles.length + ' libres</span></div>' +
+            '<div class="chips">' + c.perfiles.map(function (x) { return '<span class="chip">Perfil ' + esc(x.perfil) + (x.pin ? ' · PIN ' + esc(x.pin) : '') + '</span>'; }).join("") + '</div></div>';
+        }).join("") + '</div>';
+    }).join("");
+  }).catch(fallo);
+};
+
+// ---------- Cuentas madre ----------
+VISTAS.cuentas = function () {
+  cargando();
+  api("adm_cuentas").then(function (r) {
+    $("vista").innerHTML = '<h2>Cuentas madre (' + r.cuentas.length + ')</h2>' + (r.cuentas.length ? r.cuentas.map(function (c, i) {
+      var id = "cm" + i; CACHE[id] = "Correo: " + c.correo + "\nContraseña: " + c.clave;
+      return '<div class="card"><div class="row"><b>' + esc(c.plataforma) + '</b><span class="mut">' + esc(c.id) + '</span><span class="sp"></span>' +
+        (c.caida ? '<span class="pill bad">caída</span> ' : '') + diasTxt(c.dias) + '</div>' +
+        '<div style="margin-top:6px">📧 ' + esc(c.correo) + '</div>' +
+        '<div class="row mut" style="margin-top:4px"><span>👥 ' + c.ocupados + '/' + c.perfiles + ' perfiles vendidos</span>' + (c.costo ? '<span>· 💵 costo ' + esc(c.costo) + '</span>' : '') + (c.vence ? '<span>· 📅 vence ' + esc(c.vence) + '</span>' : '') + '</div>' +
+        '<div class="row" style="margin-top:8px"><button class="btn sec sm" onclick="copiar(CACHE[\'' + id + '\'])">Copiar acceso</button></div></div>';
+    }).join("") : '<div class="card empty">No encontré cuentas madre</div>');
+  }).catch(fallo);
+};
+
+// ---------- Ajustes ----------
+VISTAS.ajustes = function () {
+  $("vista").innerHTML = '<h2>Ajustes</h2><div class="card"><b>Cambiar PIN de ingreso</b>' +
+    '<label class="f">PIN actual</label><input class="in" type="password" id="pA" inputmode="numeric" maxlength="8" autocomplete="current-password">' +
+    '<label class="f">PIN nuevo (4 a 8 números)</label><input class="in" type="password" id="pN" inputmode="numeric" maxlength="8" autocomplete="new-password">' +
+    '<label class="f">Repite el PIN nuevo</label><input class="in" type="password" id="pN2" inputmode="numeric" maxlength="8" autocomplete="new-password">' +
+    '<div class="err" id="pErr"></div><button class="btn" style="margin-top:12px" onclick="cambiarPin(this)">Guardar PIN</button></div>' +
+    '<div class="card"><b>Seguridad</b><div class="mut" style="margin-top:6px">• La sesión dura 6 horas y se renueva mientras uses el panel.<br>• Con 5 PIN errados el panel se bloquea 15 minutos y te llega aviso a Telegram.<br>• Cada ingreso se avisa en Telegram.<br>• Usa “Salir” si entras desde un celular o computador que no es tuyo.</div></div>';
+};
+function cambiarPin(b) {
+  var a = $("pA").value.replace(/\D/g, ""), n = $("pN").value.replace(/\D/g, ""), n2 = $("pN2").value.replace(/\D/g, "");
+  if (n !== n2) return $("pErr").textContent = "Los PIN nuevos no coinciden.";
+  if (n.length < 4) return $("pErr").textContent = "El PIN nuevo debe tener al menos 4 números.";
+  if (n.length !== 4) return $("pErr").textContent = "Por ahora el teclado de ingreso usa 4 números: elige un PIN de 4.";
+  b.disabled = true;
+  api("adm_pin", { actual: a, nuevo: n }).then(function () { $("pErr").textContent = ""; toast("PIN actualizado ✓"); $("pA").value = $("pN").value = $("pN2").value = ""; })
+    .catch(function (e) { $("pErr").textContent = e.message; }).then(function () { b.disabled = false; });
+}
+
+// ---------- Inicio ----------
+pintarPad(); pintarDots();
+(function () {
+  var t = leerSes();
+  if (!t) return;
+  TOKEN = t; $("login").classList.add("oculto"); $("app").classList.remove("oculto"); ir("resumen");
+})();
+</script>
+</body>
+</html>
