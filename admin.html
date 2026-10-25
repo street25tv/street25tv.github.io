@@ -123,6 +123,8 @@ textarea.in{width:100%;background:var(--bg2);border:1px solid var(--line);color:
 textarea.in:focus{border-color:var(--acc2)}
 .mc.env{opacity:.55}.mc .mprev{white-space:pre-wrap;font-size:13px;color:var(--mut);margin-top:8px;max-height:0;overflow:hidden;transition:max-height .2s}.mc.open .mprev{max-height:400px}
 .cmp{margin-top:8px;font-size:13px;color:var(--warn)}
+.pisow{margin-top:8px;font-size:13px;color:var(--acc)}
+.pausa{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.45);border-radius:12px;padding:12px;margin:0 0 10px;font-size:14px}
 .vars{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.vars button{background:var(--bg2);border:1px dashed var(--line);color:var(--mut);border-radius:8px;padding:3px 8px;font-size:12px;cursor:pointer}
 .cuenta{border-top:1px dashed var(--line);padding-top:8px;margin-top:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
@@ -526,10 +528,10 @@ function verCliente(tel) {
           '<button class="btn sm" onclick="renovarPerfil(' + p.fila + ',this)">🔄 Renovar 30 días' + (p.precio ? " · " + pesos(p.precio) : "") + '</button>' +
           '<button class="btn sec sm" onclick="garForm(' + p.fila + ')">🛡 Garantía</button>' +
           (p.dias !== null && p.dias !== undefined && p.dias <= 3 ? '<button class="btn sec sm" onclick="compForm(' + p.fila + ')">🤝 Compromiso</button>' : '') +
-          '<button class="btn bad sm" onclick="liberarPerfil(' + p.fila + ',this)">🔓 Liberar</button></div><div class="cmpi"></div><div class="res"></div></div>';
+          '<button class="btn bad sm" onclick="liberarPerfil(' + p.fila + ',this)">🔓 Liberar</button></div><div class="pisoi"></div><div class="cmpi"></div><div class="res"></div></div>';
       }).join("");
     $("vista").innerHTML = h;
-    compMarcar();
+    compMarcar(); pisoMarcar();
   }).catch(fallo);
 }
 function compMarcar() {
@@ -594,7 +596,8 @@ function liberarPerfil(fila, btn) {
 // ---------- Vender ----------
 VISTAS.vender = function () {
   cargando();
-  api("adm_inventario").then(function (r) {
+  Promise.all([api("adm_inventario"), api("adm_pisos").catch(function () { return null; })]).then(function (rr) {
+    var r = rr[0]; CACHE.pisos = rr[1];
     CACHE.plats = r.plataformas.filter(function (p) { return p.libres > 0; });
     if (!CACHE.plats.length) { $("vista").innerHTML = '<h2>Nueva venta</h2><div class="card empty">No hay perfiles libres. Carga perfiles en el Inventario.</div>'; return; }
     $("vista").innerHTML = '<h2>Nueva venta</h2><div class="card">' +
@@ -602,7 +605,7 @@ VISTAS.vender = function () {
       '<label class="f">WhatsApp</label><input class="in" id="vWa" maxlength="13" inputmode="numeric" placeholder="Ej: 3001234567">' +
       '<label class="f">Perfiles <span class="mut">(cantidad y precio; deja el precio vacío para usar el del inventario)</span></label><div id="vLineas"></div>' +
       '<button class="btn sec sm" onclick="agregarLinea()">＋ Otra plataforma</button>' +
-      '<div class="err" id="vErr"></div>' +
+      '<div class="pisow" id="vPiso"></div><div class="err" id="vErr"></div>' +
       '<div class="row" style="margin-top:14px"><button class="btn" id="vBtn" onclick="vender()">Registrar venta</button><span class="mut">El sistema asigna los perfiles libres y arma el mensaje con los accesos y el código.</span></div>' +
       '<div id="vRes"></div></div>';
     agregarLinea();
@@ -610,11 +613,37 @@ VISTAS.vender = function () {
 };
 function agregarLinea() {
   var d = document.createElement("div"); d.className = "lin";
-  d.innerHTML = '<select class="in">' + CACHE.plats.map(function (p, i) { return '<option value="' + i + '">' + esc(p.plataforma) + ' (' + p.libres + ' libres)</option>'; }).join("") + '</select>' +
+  d.innerHTML = '<select class="in" onchange="pisoRevisar()">' + CACHE.plats.map(function (p, i) { return '<option value="' + i + '">' + esc(p.plataforma) + ' (' + p.libres + ' libres)</option>'; }).join("") + '</select>' +
     '<input class="in" type="number" min="1" max="10" value="1">' +
-    '<input class="in" inputmode="numeric" placeholder="Precio">' +
-    '<button class="btn sec sm" title="Quitar" onclick="this.parentNode.remove()">✕</button>';
+    '<input class="in" inputmode="numeric" placeholder="Precio" oninput="pisoRevisar()">' +
+    '<button class="btn sec sm" title="Quitar" onclick="this.parentNode.remove();pisoRevisar()">✕</button>';
   $("vLineas").appendChild(d);
+}
+// Piso de precio: lo que te cuesta cada perfil (costo de la cuenta madre ÷ sus perfiles).
+function pisoBajos() {
+  var pz = CACHE.pisos, out = [];
+  if (!pz || !$("vLineas")) return out;
+  [].forEach.call($("vLineas").querySelectorAll(".lin"), function (ln) {
+    var c = ln.querySelectorAll(".in"), p = CACHE.plats[Number(c[0].value)], precio = Number(String(c[2].value).replace(/\D/g, "")) || 0;
+    var piso = p ? pz.plataformas[p.plataforma] : 0;
+    if (p && precio && piso && precio < piso) out.push({ plataforma: p.plataforma, precio: precio, piso: piso });
+  });
+  return out;
+}
+function pisoRevisar() {
+  if (!$("vPiso")) return;
+  var b = pisoBajos();
+  $("vPiso").innerHTML = b.map(function (x) { return '⚠️ ' + esc(x.plataforma) + ' a ' + pesos(x.precio) + ' queda por debajo del costo del perfil (' + pesos(x.piso) + ').'; }).join("<br>");
+}
+function pisoMarcar() {
+  api("adm_pisos").then(function (pz) {
+    CACHE.pisos = pz;
+    ((CACHE.cliente && CACHE.cliente.perfiles) || []).forEach(function (p) {
+      var piso = pz.filas[p.fila], e = $("f_" + p.fila);
+      if (!e || !piso || !p.precio || p.precio >= piso || !e.querySelector(".pisoi")) return;
+      e.querySelector(".pisoi").innerHTML = '<div class="pisow">⚠️ Paga ' + pesos(p.precio) + ' y el perfil te cuesta ' + pesos(piso) + '. Este cliente te deja pérdida; considera subirle el precio al renovar.</div>';
+    });
+  }).catch(function () {});
 }
 function vender() {
   var nom = $("vNom").value.trim(), wa = $("vWa").value.replace(/\D/g, "");
@@ -630,6 +659,8 @@ function vender() {
     items.push({ plataforma: p.base, tipo: p.tipo, cant: cant, precio: c[2].value.replace(/\D/g, "") });
   }
   if (!items.length) return err("Agrega al menos un perfil.");
+  var bajos = pisoBajos();
+  if (bajos.length && !confirm("⚠️ Precio por debajo del costo:\n\n" + bajos.map(function (x) { return "• " + x.plataforma + ": " + pesos(x.precio) + " (el perfil te cuesta " + pesos(x.piso) + ")"; }).join("\n") + "\n\nEse cliente te deja pérdida. ¿Vender de todas formas?")) return;
   if (!confirm("¿Registrar la venta a " + nom + " (" + wa + ")?")) return;
   err(""); var b = $("vBtn"); b.disabled = true; b.textContent = "Registrando…";
   api("adm_vender", { nombre: nom, contacto: wa, items: items }).then(function (r) {
@@ -740,6 +771,7 @@ function pintarMsj() {
     '<label class="f">Plantilla</label><div class="row">' + MSJ_PLANT[g].map(function (p, i) { return '<button class="btn sec sm" onclick="msjPlantilla(' + i + ')">' + esc(p[0]) + '</button>'; }).join("") + '</div>' +
     '<label class="f">Mensaje</label><textarea class="in" id="mTxt" oninput="CACHE.mTxt[CACHE.mf.grupo]=this.value;msjAviso();filtrarMsj(true)">' + esc(CACHE.mTxt[g]) + '</textarea>' +
     '<div class="vars">' + ["{nombre}", "{plataformas}"].concat(g === "activos" ? ["{vence}"] : g === "compromisos" ? ["{fecha}"] : []).concat(["{tienda}"]).map(function (v) { return '<button onclick="msjVar(\'' + v + '\')">' + v + '</button>'; }).join("") + '</div>' +
+    '<label class="gopt"><input type="checkbox"' + (CACHE.mVariar === false ? '' : ' checked') + ' onchange="CACHE.mVariar=this.checked;filtrarMsj(true)"> Variar el saludo en cada cliente (Hola, Buenas, Qué tal…) para que no todos los mensajes sean idénticos</label>' +
     '<div class="err" id="mAviso"></div></div>' +
     '<div id="mLista"></div>';
   msjAviso(); filtrarMsj();
@@ -786,9 +818,32 @@ function msjTexto(x) {
     var pm = x.ps.filter(function (p) { return p.dias === x.min; })[0]; vence = pm ? pm.vence : "";
   } else if (g === "compromisos") { plats = [x.c.plataforma]; vence = x.c.promete; }
   else plats = CACHE.mf.plat ? [CACHE.mf.plat] : x.c.plataformas;
-  return (CACHE.mTxt[g] || "").replace(/\{nombre\}/g, msjNombre(x.c.nombre)).replace(/\{plataformas\}/g, msjLista(plats))
+  return msjVariar(CACHE.mTxt[g] || "", x.c.tel).replace(/\{nombre\}/g, msjNombre(x.c.nombre)).replace(/\{plataformas\}/g, msjLista(plats))
     .replace(/\{vence\}/g, vence).replace(/\{fecha\}/g, vence).replace(/\{tienda\}/g, "https://" + CACHE.msj.tienda);
 }
+// Envío en tandas: cada MSJ_TANDA envíos se sugiere una pausa de MSJ_PAUSA minutos para cuidar el número de WhatsApp.
+var MSJ_TANDA = 15, MSJ_PAUSA = 3, MSJ_SALUDOS = ["Hola", "Buenas", "Qué tal", "Hola, qué tal"];
+function msjSes() { try { return JSON.parse(sessionStorage.getItem("st25_msj_ses") || "{}"); } catch (e) { return {}; } }
+function msjSesGuardar(v) { try { sessionStorage.setItem("st25_msj_ses", JSON.stringify(v)); } catch (e) {} }
+function msjVariar(t, tel) {
+  if (CACHE.mVariar === false) return t;
+  var h = 0; String(tel).split("").forEach(function (d) { h = (h * 31 + d.charCodeAt(0)) % 997; });
+  return t.replace(/^Hola\b/, MSJ_SALUDOS[h % MSJ_SALUDOS.length]);
+}
+function msjPausaHtml() {
+  var s = msjSes(), falta = Math.max(0, (s.pausaHasta || 0) - Date.now());
+  if (!falta) return '<div class="mut" style="margin:0 4px 10px">Enviados en esta sesión: <b>' + (s.n || 0) + '</b> · pausa sugerida cada ' + MSJ_TANDA + '.</div>';
+  var m = Math.floor(falta / 60000), sg = Math.ceil(falta % 60000 / 1000); if (sg === 60) { m++; sg = 0; }
+  return '<div class="pausa">☕ <b>Pausa sugerida: ' + m + ':' + ("0" + sg).slice(-2) + '</b><br>Ya enviaste ' + (s.n || 0) + ' mensajes. Esperar unos minutos entre tandas ayuda a que WhatsApp no restrinja tu número.' +
+    '<div class="row" style="margin-top:8px"><button class="btn sec sm" onclick="msjSaltarPausa()">Seguir de todas formas</button></div></div>';
+}
+function msjPausaTick() {
+  clearTimeout(msjPausaTick.t);
+  var e = $("mPausa"); if (!e) return;
+  e.innerHTML = msjPausaHtml();
+  if ((msjSes().pausaHasta || 0) > Date.now()) msjPausaTick.t = setTimeout(msjPausaTick, 1000);
+}
+function msjSaltarPausa() { var s = msjSes(); s.pausaHasta = 0; msjSesGuardar(s); msjPausaTick(); }
 function filtrarMsj(soloTexto) {
   var l = msjFiltrados(), g = CACHE.mf.grupo, env = CACHE.msjEnv || {};
   CACHE.mItems = l;
@@ -797,7 +852,7 @@ function filtrarMsj(soloTexto) {
     return;
   }
   var n = l.filter(function (x) { return env[g + x.c.tel]; }).length;
-  $("mLista").innerHTML = '<div class="row" style="margin:4px 4px 8px"><span class="mut">' + l.length + (l.length === 1 ? ' cliente' : ' clientes') + ' · enviados ' + n + '</span><span class="sp"></span>' +
+  $("mLista").innerHTML = '<div id="mPausa"></div><div class="row" style="margin:4px 4px 8px"><span class="mut">' + l.length + (l.length === 1 ? ' cliente' : ' clientes') + ' · enviados ' + n + '</span><span class="sp"></span>' +
     (n ? '<button class="btn sec sm" onclick="msjReiniciar()">Reiniciar enviados</button>' : '') + '</div>' +
     (l.length ? l.map(function (x, i) {
       var c = x.c, info;
@@ -811,12 +866,16 @@ function filtrarMsj(soloTexto) {
         '<button class="btn sec sm" onclick="$(\'mc_' + i + '\').classList.toggle(\'open\')">Ver mensaje</button>' +
         (g !== "exclientes" ? '<button class="btn sec sm" onclick="verCliente(\'' + esc(c.tel) + '\')">Ver cliente</button>' : '') + '</div></div>';
     }).join("") : '<div class="card empty">Nadie cumple esos filtros</div>');
+  msjPausaTick();
 }
 function msjEnviar(i) {
   var x = CACHE.mItems[i], t = msjTexto(x);
   if (!t.trim()) return toast("Escribe un mensaje primero");
   if (t.indexOf("(escribe") !== -1) return alert("Completa la parte que dice “(escribe…)” antes de enviar.");
+  var s = msjSes();
+  if ((s.pausaHasta || 0) > Date.now()) { $("mPausa").scrollIntoView({ behavior: "smooth", block: "center" }); return toast("Estás en pausa. Espera o toca “Seguir de todas formas”"); }
   window.open(waUrl(x.c.tel, t), "_blank", "noopener");
+  s.n = (s.n || 0) + 1; if (s.n % MSJ_TANDA === 0) s.pausaHasta = Date.now() + MSJ_PAUSA * 60000; msjSesGuardar(s);
   CACHE.msjEnv[CACHE.mf.grupo + x.c.tel] = 1; msjEnvGuardar(); filtrarMsj();
 }
 function msjReiniciar() {
