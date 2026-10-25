@@ -333,6 +333,7 @@ VISTAS.finanzas = function (mes) {
       finKpi("Por cobrar en 7 días", pesos(r.porCobrar7), null, "perfiles que vencen") +
       finKpi("En riesgo", pesos(r.enRiesgo), null, "vencidos sin renovar") +
       '</div>' +
+      '<div id="renBox"><h2 style="margin-top:22px">Tasa de renovación</h2><div class="load">Calculando…</div></div>' +
 
       '<h2 style="margin-top:22px">Ingresos vs. costos por mes</h2><div class="card">' +
       '<div class="leg"><span><i style="background:' + COL.ing + '"></i>Ingresos</span><span><i style="background:' + COL.cos + '"></i>Costos proveedores</span><span class="mut">Toca un mes para verlo</span></div>' +
@@ -353,8 +354,32 @@ VISTAS.finanzas = function (mes) {
     barras("chDias", f.diario.map(function (d) { return { et: String(d.dia), clave: d.dia, v: [d.ingresos], extra: d }; }),
       [COL.ing], function (d) { return '<b>' + d.clave + ' de ' + esc(mesTxt(f.mes, true).split(" ")[0].toLowerCase()) + '</b><br>Ingresos ' + pesos(d.extra.ingresos) + (d.extra.costos ? '<br>Costos ' + pesos(d.extra.costos) : ''); },
       { cadaEt: f.diario.length > 16 ? 5 : 1 });
+    renCargar(f.mes);
   }).catch(fallo);
 };
+function renCargar(mes) {
+  api("adm_renovacion", { mes: mes }).then(function (r) {
+    if (!$("renBox")) return;
+    var a = r.actual, sem = function (t) { return t === null ? "" : t >= 80 ? "ok" : t >= 65 ? "warn" : "bad"; };
+    var txt = function (t) { return t === null ? "" : t >= 80 ? "Sana" : t >= 65 ? "Mejorable" : "Baja"; };
+    var h = '<h2 style="margin-top:22px">Tasa de renovación · ' + esc(mesTxt(r.mes, true)) + '</h2>' +
+      '<div class="mut" style="margin:-6px 2px 10px">De los perfiles que vencieron, cuántos volvieron a pagar (entre ' + r.reglas.antes + ' días antes y ' + r.reglas.despues + ' días después de vencer).</div>' +
+      '<div class="fgrid big">' +
+      finKpi("Tasa de renovación", a.tasa === null ? "—" : a.tasa + "%", null, a.tasa === null ? "aún sin datos" : '<span class="pill ' + sem(a.tasa) + '">' + txt(a.tasa) + '</span>') +
+      finKpi("Vencieron", String(a.vencieron), null, "perfiles en el mes") +
+      finKpi("Renovaron", String(a.renovaron), null, "") +
+      finKpi("Aún pueden renovar", String(a.pendientes), null, "dentro de los " + r.reglas.despues + " días") +
+      finKpi("No renovaron", String(a.perdidos), null, a.ingresoPerdido ? "−" + pesos(a.ingresoPerdido) + " al mes" : "") +
+      '</div>' +
+      '<div class="card" style="margin-top:10px;overflow-x:auto"><table class="tp"><tr><th>Mes</th><th>Tasa</th><th>Renovaron</th><th>No</th><th>Ingreso perdido</th></tr>' +
+      r.serie.slice().reverse().map(function (x) {
+        return '<tr><td>' + esc(mesTxt(x.mes)) + '</td><td>' + (x.tasa === null ? '<span class="mut">—</span>' : '<span class="pill ' + sem(x.tasa) + '">' + x.tasa + '%</span>') + '</td><td>' + x.renovaron + (x.pendientes ? ' <span class="mut">(+' + x.pendientes + ' pend.)</span>' : '') + '</td><td>' + x.perdidos + '</td><td>' + (x.ingresoPerdido ? '<span class="neg">−' + pesos(x.ingresoPerdido) + '</span>' : '<span class="mut">—</span>') + '</td></tr>';
+      }).join("") + '</table></div>' +
+      (r.plataformas.length ? '<div class="card" style="overflow-x:auto"><b>Por plataforma</b> <span class="mut">· primero las que más clientes pierden</span><table class="tp" style="margin-top:6px"><tr><th>Plataforma</th><th>Tasa</th><th>Renovaron</th><th>No</th></tr>' +
+        r.plataformas.map(function (x) { return '<tr><td>' + esc(x.plataforma) + '</td><td>' + (x.tasa === null ? '<span class="mut">—</span>' : '<span class="pill ' + sem(x.tasa) + '">' + x.tasa + '%</span>') + '</td><td>' + x.renovaron + (x.pendientes ? ' <span class="mut">(+' + x.pendientes + ')</span>' : '') + '</td><td>' + x.perdidos + '</td></tr>'; }).join("") + '</table></div>' : '');
+    $("renBox").innerHTML = h;
+  }).catch(function (e) { if ($("renBox")) $("renBox").innerHTML = '<h2 style="margin-top:22px">Tasa de renovación</h2><div class="err">' + esc(e.message) + '</div>'; });
+}
 function tablaPlat(l) {
   if (!l.length) return '<div class="empty">Sin movimientos este mes</div>';
   var max = Math.max.apply(null, l.map(function (x) { return x.ingresos; }).concat([1]));
@@ -517,21 +542,28 @@ function compMarcar() {
   }).catch(function () {});
 }
 function compForm(fila) {
-  var caja = $("f_" + fila), max = (CACHE.comp && CACHE.comp.max) || 15;
-  caja.querySelector(".res").innerHTML = '<div class="card acc-form" style="margin-top:10px"><b>🤝 Compromiso de pago</b><div class="mut" style="margin-top:4px">Mientras esté activo, el sistema no libera este perfil.</div>' +
+  var caja = $("f_" + fila), max = (CACHE.comp && CACHE.comp.max) || 7;
+  caja.querySelector(".res").innerHTML = '<div class="card acc-form" style="margin-top:10px"><b>🤝 Compromiso de pago</b><div class="mut" style="margin-top:4px">Mientras esté activo, el sistema no libera este perfil. Máximo ' + max + ' días y uno a la vez por cliente.</div>' +
     '<label class="f">¿Qué día promete pagar?</label><input class="in" type="date" id="cf_' + fila + '" min="' + hoyISO(0) + '" max="' + hoyISO(max) + '" value="' + hoyISO(3) + '">' +
     '<label class="f">Nota (opcional)</label><input class="in" id="cn_' + fila + '" maxlength="200" placeholder="Ej: le pagan el viernes">' +
+    '<label class="gopt oculto" id="cx_' + fila + '"><input type="checkbox" id="cxe_' + fila + '"> Hacer una excepción (queda anotada en la hoja)</label>' +
     '<div class="err" id="ce_' + fila + '"></div><div class="row" style="margin-top:10px"><button class="btn" onclick="compGuardar(' + fila + ',this)">Guardar compromiso</button><button class="btn sec sm" onclick="this.closest(\'.acc-form\').remove()">Cancelar</button></div></div>';
 }
 function compGuardar(fila, b) {
   var f = $("cf_" + fila).value, n = $("cn_" + fila).value.trim();
   if (!f) return $("ce_" + fila).textContent = "Elige la fecha.";
   b.disabled = true; b.textContent = "Guardando…";
-  api("adm_comp_crear", { fila: fila, fecha: f, nota: n }).then(function (r) {
+  var ex = $("cxe_" + fila) && $("cxe_" + fila).checked;
+  api("adm_comp_crear", { fila: fila, fecha: f, nota: n, excepcion: !!ex }).then(function (r) {
     var caja = $("f_" + fila);
     caja.querySelector(".res").innerHTML = '<div style="margin-top:8px"><span class="pill ok">Compromiso hasta el ' + esc(r.promete) + '</span></div>' + msgBox(r.mensaje, "Confirmación para el cliente");
     toast("Compromiso guardado ✓"); compMarcar();
-  }).catch(function (e) { b.disabled = false; b.textContent = "Guardar compromiso"; $("ce_" + fila).textContent = e.message; });
+  }).catch(function (e) {
+    b.disabled = false; b.textContent = "Guardar compromiso";
+    var m = String(e.message || "");
+    if (m.indexOf("INCUMPLIO:") === 0) { m = m.slice(10).trim(); $("cx_" + fila).classList.remove("oculto"); }
+    $("ce_" + fila).textContent = m;
+  });
 }
 function enviarCodigo(tel) {
   api("adm_codigo", { contacto: tel }).then(function (r) { $("cmsg").innerHTML = msgBox(r.mensaje, "Mensaje con el código"); }).catch(function (e) { $("cmsg").innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
@@ -643,7 +675,7 @@ function compSeccion(cp) {
   var h = '<h2 style="margin-top:4px">🤝 Compromisos de pago</h2><div class="mut" style="margin:-6px 0 10px">Activos ' + cp.activos.length + ' · cumplidos este mes ' + cp.cumplidos.length + ' · incumplidos este mes ' + cp.incumplidos.length + '</div>';
   h += cp.activos.map(function (c) { return it(c, function (c, id) { return wa(c, id, "Recordar pago") + '<button class="btn sec sm" onclick="compCancelar(\'' + esc(c.id) + '\',this)">Cancelar</button>'; }); }).join("");
   if (cp.incumplidos.length) h += '<h2 style="margin-top:14px;font-size:16px">No cumplieron (' + cp.incumplidos.length + ')</h2>' + cp.incumplidos.map(function (c) {
-    return it(c, function (c, id) { return wa(c, id, "Cobrar") + (c.tel ? '<button class="btn sec sm" onclick="verCliente(\'' + esc(c.tel) + '\')">🤝 Nuevo compromiso</button>' : '') + '<button class="btn bad sm" onclick="compLiberar(\'' + esc(c.id) + '\',' + c.fila + ',this)">🔓 Liberar</button>'; });
+    return it(c, function (c, id) { return wa(c, id, "Cobrar") + '<button class="btn bad sm" onclick="compLiberar(\'' + esc(c.id) + '\',' + c.fila + ',this)">🔓 Liberar</button>'; });
   }).join("");
   if (cp.cumplidos.length) h += '<details class="card"><summary style="cursor:pointer">✅ Cumplidos este mes (' + cp.cumplidos.length + ')</summary>' + cp.cumplidos.map(function (c) { return '<div class="mut" style="margin-top:6px">' + esc(c.cliente + " · " + c.plataforma + " · prometió " + c.promete) + '</div>'; }).join("") + '</details>';
   return h + '<div style="height:6px"></div>';
