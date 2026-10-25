@@ -115,6 +115,9 @@ input.pin{width:64px;padding:6px 6px;text-align:center}
 .tp td{white-space:normal}.tp td:first-child{min-width:0;width:56px}.tp td:last-child{white-space:nowrap;width:1%}
 .ptx{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:13px;color:var(--mut)}.ptx b{color:var(--txt)}
 .vend{font-size:11px;color:var(--warn);white-space:nowrap}
+.gimp{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);font-size:13.5px;line-height:1.5}
+.gimp.warn{border-color:rgba(245,158,11,.45)}.gimp.bad{border-color:rgba(255,61,110,.5)}
+.gopt{display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:14px}.gopt input{margin-top:3px}
 .oculto{display:none!important}
 .cuenta{border-top:1px dashed var(--line);padding-top:8px;margin-top:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
@@ -154,7 +157,7 @@ var API_URL = "https://script.google.com/macros/s/AKfycbzRPSLHYnZpNmhsGFux72vykD
 var TOKEN = "", PIN = "", VISTA = "resumen", CACHE = {};
 var TABS = [
   ["resumen", "📊 Resumen"], ["finanzas", "💰 Finanzas"], ["pedidos", "🧾 Pedidos"], ["clientes", "👥 Clientes"], ["vender", "➕ Vender"],
-  ["vencimientos", "⏰ Vencimientos", "⏰ Vencen"], ["inventario", "📦 Inventario"], ["cuentas", "🏦 Cuentas madre", "🏦 Cuentas"], ["ajustes", "⚙️ Ajustes"]
+  ["vencimientos", "⏰ Vencimientos", "⏰ Vencen"], ["inventario", "📦 Inventario"], ["cuentas", "🏦 Cuentas madre", "🏦 Cuentas"], ["garantias", "🛡 Garantías"], ["ajustes", "⚙️ Ajustes"]
 ];
 
 // ---------- Utilidades ----------
@@ -489,7 +492,8 @@ function verCliente(tel) {
           '<pre class="acc">' + esc(p.acceso) + '</pre>' +
           '<div class="row"><button class="btn sec sm" onclick="copiar(document.querySelector(\'#f_' + p.fila + ' pre\').textContent)">Copiar datos</button>' +
           '<a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waUrl(c.contacto, p.acceso)) + '">📲 Enviar datos</a>' +
-          '<button class="btn sm" onclick="renovarPerfil(' + p.fila + ',this)">🔄 Renovar 30 días' + (p.precio ? " · " + pesos(p.precio) : "") + '</button></div><div class="res"></div></div>';
+          '<button class="btn sm" onclick="renovarPerfil(' + p.fila + ',this)">🔄 Renovar 30 días' + (p.precio ? " · " + pesos(p.precio) : "") + '</button>' +
+          '<button class="btn sec sm" onclick="garForm(' + p.fila + ')">🛡 Garantía</button></div><div class="res"></div></div>';
       }).join("");
     $("vista").innerHTML = h;
   }).catch(fallo);
@@ -707,9 +711,10 @@ function verCm(id) {
       '<h2 style="margin-top:18px">Perfiles (' + r.perfiles.length + ')</h2><div class="card" style="overflow-x:auto"><table class="tp"><tr><th>Perfil</th><th>Cliente</th><th>PIN</th></tr>' +
       r.perfiles.map(function (p) {
         return '<tr id="pf_' + p.fila + '"><td><b>' + esc(p.perfil) + '</b><div class="mut">' + pesos(p.lista || p.precio) + '</div>' + (p.cliente && p.lista && p.precio < p.lista ? '<div class="vend">vendido ' + pesos(p.precio) + '</div>' : '') + '</td><td>' +
-          (p.cliente ? '<a href="#" onclick="verCliente(\'' + esc(p.contacto) + '\');return false">' + esc(p.cliente) + '</a><div class="mut">' + esc(p.contacto) + ' · vence ' + esc(p.vence) + '</div><div style="margin-top:4px">' + diasTxt(p.dias) + '</div>' : '<span class="pill ok">libre</span>') + '</td>' +
+          (p.bloqueado ? '<span class="pill warn">🔒 bloqueado por garantía</span><div style="margin-top:6px"><button class="btn sec sm" onclick="garDesbloquear(' + p.fila + ',this,true)">🔓 Desbloquear</button></div>' :
+          p.cliente ? '<a href="#" onclick="verCliente(\'' + esc(p.contacto) + '\');return false">' + esc(p.cliente) + '</a><div class="mut">' + esc(p.contacto) + ' · vence ' + esc(p.vence) + '</div><div class="row" style="margin-top:4px;gap:6px">' + diasTxt(p.dias) + '<button class="btn sec sm" onclick="garDesdeCm(' + p.fila + ')">🛡 Garantía</button></div>' : '<span class="pill ok">libre</span>') + '</td>' +
           '<td><div class="row" style="gap:6px;flex-wrap:nowrap"><input class="in pin" value="' + esc(p.pin) + '" maxlength="4" inputmode="numeric" placeholder="—"><button class="btn sec sm" title="Guardar PIN" onclick="pinCm(' + p.fila + ',this)">💾</button></div></td></tr>';
-      }).join("") + '</table><div id="pinRes"></div></div>' +
+      }).join("") + '</table><div id="pinRes"></div></div><div id="garCm"></div>' +
       '<h2 style="margin-top:18px">Pagos al proveedor</h2><div class="card" style="overflow-x:auto">' + (r.pagos.length ? '<table><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th>Nuevo vence</th></tr>' + r.pagos.map(function (x) {
         return '<tr><td>' + esc(x.fecha) + '</td><td>' + esc(x.tipo) + (x.proveedor ? '<div class="mut">' + esc(x.proveedor) + '</div>' : '') + '</td><td>' + pesos(x.monto) + '</td><td>' + esc(x.nuevo || "—") + '</td></tr>';
       }).join("") + '</table>' : '<div class="empty">Sin pagos registrados</div>') + '</div>';
@@ -736,7 +741,7 @@ function accCm(tipo) {
     '<div class="f2"><div><label class="f">Cuántos</label><input class="in" id="aN" type="number" min="1" max="10" value="1"></div><div><label class="f">Precio por perfil</label><input class="in" id="aPr" inputmode="numeric" value="' + ((r.perfiles[0] || {}).precio || "") + '"></div></div>' +
     '<div class="mut" style="margin-top:8px">Se numeran después del último perfil y toman el correo y la contraseña de la cuenta.</div>', "Agregar perfiles", "agregarCm()");
   else if (tipo === "mover" || tipo === "caida") {
-    var ocup = r.perfiles.filter(function (p) { return p.cliente; }), usados = {};
+    var ocup = r.perfiles.filter(function (p) { return p.cliente && !p.bloqueado; }), usados = {};
     var filas = ocup.map(function (p) {
       var auto = ""; r.libres.forEach(function (l) { if (!auto && !usados[l.fila]) auto = l.fila; }); if (auto && tipo === "caida") usados[auto] = 1; else auto = "";
       return '<div class="mov"><div>👤 <b>' + esc(p.cliente) + '</b> <span class="mut">perfil ' + esc(p.perfil) + ' · vence ' + esc(p.vence) + '</span></div><select class="in" data-from="' + p.fila + '"><option value="">— No mover —</option>' +
@@ -819,6 +824,101 @@ function pinCm(fila, btn) {
 }
 
 // ---------- Ajustes ----------
+
+// ---------- Garantías ----------
+var GAR_MOTIVOS = ["No carga / error al reproducir", "Límite de pantallas o dispositivo bloqueado", "Cambiaron la contraseña", "Perfil borrado o modificado", "Cuenta caída", "Otro"];
+function garCaja(fila) { return $("f_" + fila) ? $("f_" + fila).querySelector(".res") : $("garCm"); }
+function garDesdeCm(fila) { garForm(fila); }
+function garForm(fila) {
+  var box = garCaja(fila); if (!box) return;
+  box.innerHTML = '<div class="load">Buscando perfiles disponibles…</div>';
+  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  api("adm_gar_opciones", { fila: fila }).then(function (r) {
+    CACHE.gar = r; var o = r.origen;
+    var misma = r.destinos.filter(function (d) { return d.mismaCuenta; }), otras = r.destinos.filter(function (d) { return !d.mismaCuenta && !d.cuentaNueva; }), nuevas = r.destinos.filter(function (d) { return d.cuentaNueva; });
+    var opt = function (d) { return '<option value="' + d.fila + '">' + esc(d.cuenta) + ' · perfil ' + esc(d.perfil) + (d.cuentaNueva ? ' ⚠️ cuenta sin clientes' : '') + '</option>'; };
+    var grp = function (t, l) { return l.length ? '<optgroup label="' + esc(t) + '">' + l.map(opt).join("") + '</optgroup>' : ''; };
+    box.innerHTML = '<div class="card acc-form" style="margin-top:10px"><div class="row"><b>🛡 Garantía · ' + esc(o.cliente) + '</b><span class="sp"></span><button class="btn sec sm" onclick="this.closest(\'.acc-form\').remove()">Cerrar</button></div>' +
+      '<div class="mut" style="margin-top:4px">' + esc(o.plataforma) + ' · ' + esc(o.cuenta) + ' perfil ' + esc(o.perfil) + ' · vence ' + esc(o.vence) + ' · paga ' + pesos(o.vendido) + '</div>' +
+      '<label class="f">Motivo</label><select class="in" id="gMot">' + GAR_MOTIVOS.map(function (m) { return '<option>' + esc(m) + '</option>'; }).join("") + '</select>' +
+      '<label class="f">Solución</label><select class="in" id="gDst" onchange="garImpacto()"><option value="">Resolver en el mismo perfil (sin mover)</option>' +
+      grp("Misma cuenta", misma) + grp("Otras cuentas con clientes", otras) + grp("Cuentas sin clientes (empiezan a consumirse)", nuevas) + '</select>' +
+      (!r.destinos.length ? '<div class="err">No hay perfiles libres de ' + esc(o.plataforma) + '. Agrega perfiles o crea una cuenta en Cuentas madre.</div>' : '') +
+      '<div id="gOrig" style="display:none"><label class="f">¿Qué pasa con el perfil ' + esc(o.perfil) + ' de ' + esc(o.cuenta) + '?</label>' +
+      '<label class="gopt"><input type="radio" name="gOr" value="liberar" checked onchange="garImpacto()"><span><b>Liberar</b> — vuelve a la venta (el problema era del cliente o ya se arregló)</span></label>' +
+      '<label class="gopt"><input type="radio" name="gOr" value="bloquear" onchange="garImpacto()"><span><b>Bloquear</b> — queda fuera de venta hasta que lo revises y desbloquees</span></label></div>' +
+      '<div id="gImp"></div>' +
+      '<label class="f">Nota (opcional)</label><input class="in" id="gNota" maxlength="200" placeholder="Ej.: el proveedor cambió la clave">' +
+      '<div class="err" id="gErr"></div><button class="btn" id="gBtn" style="margin-top:12px" onclick="garAplicar(' + fila + ')">Aplicar garantía</button><div id="gRes"></div></div>';
+    garImpacto();
+  }).catch(function (e) { box.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+}
+function garImpacto() {
+  var r = CACHE.gar; if (!r || !$("gDst")) return;
+  var f = Number($("gDst").value), d = r.destinos.filter(function (x) { return x.fila === f; })[0];
+  var orEl = document.querySelector('input[name="gOr"]:checked'), bloq = orEl && orEl.value === "bloquear";
+  $("gOrig").style.display = d ? "" : "none";
+  var h, cls = "";
+  if (!d) h = 'Sin impacto en inventario: el cliente sigue en su mismo perfil. Solo se registra el caso.';
+  else {
+    var l = [];
+    l.push('El cliente pasa a <b>' + esc(d.cuenta) + ' perfil ' + esc(d.perfil) + '</b> con la misma fecha de vencimiento y el mismo valor (' + pesos(r.origen.vendido) + ').');
+    if (d.mismaCuenta) l.push('Misma cuenta: no cambia el correo ni la contraseña.');
+    if (d.cuentaNueva) { cls = "warn"; l.push('⚠️ <b>' + esc(d.cuenta) + ' no tiene clientes</b>: empiezas a usar una cuenta nueva' + (d.costoSlot ? ' (cada perfil cuesta ~' + pesos(d.costoSlot) + ' de esa cuenta)' : '') + '. Si puedes, usa una cuenta que ya tenga clientes.'); }
+    else l.push('Usas 1 perfil libre que podías vender por ' + pesos(d.lista) + '/mes.');
+    if (bloq) { cls = "bad"; l.push('🔒 El perfil original queda bloqueado: <b>dejas de vender ' + pesos(r.origen.lista) + '/mes</b> hasta que lo desbloquees. Pierdes 2 perfiles vendibles en vez de 1.'); }
+    else l.push('El perfil original vuelve a quedar libre para la venta: inventario neto sin cambios.');
+    h = l.join('<br>');
+  }
+  $("gImp").innerHTML = '<div class="gimp ' + cls + '"><b>Impacto en el negocio</b><br>' + h + '</div>';
+}
+function garAplicar(fila) {
+  var dst = $("gDst").value, orEl = document.querySelector('input[name="gOr"]:checked');
+  var d = { fila: fila, destino: dst, motivo: $("gMot").value, nota: $("gNota").value, origen: dst && orEl ? orEl.value : "liberar" };
+  var dd = (CACHE.gar.destinos || []).filter(function (x) { return String(x.fila) === String(dst); })[0];
+  if (dd && dd.cuentaNueva && !confirm("Vas a empezar a usar " + dd.cuenta + ", que no tiene clientes. ¿Continuar?")) return;
+  var b = $("gBtn"), err = function (t) { $("gErr").textContent = t; };
+  err(""); b.disabled = true; b.textContent = "Aplicando…";
+  api("adm_garantia", d).then(function (r) {
+    b.textContent = "✓ Garantía registrada"; toast("Garantía registrada ✓");
+    $("gRes").innerHTML = '<div style="margin-top:10px"><span class="pill ok">' + (r.movido ? "Cliente reubicado" : "Caso registrado") + '</span>' + (r.impacto ? ' <span class="pill bad">−' + pesos(r.impacto) + '/mes bloqueado</span>' : '') + (r.cuentaNueva ? ' <span class="pill warn">cuenta nueva en uso</span>' : '') + '</div>' +
+      msgBox(r.mensaje, "Mensaje para el cliente") + (r.mensaje ? '' : '<div class="mut" style="margin-top:8px">El cliente no tiene WhatsApp registrado.</div>');
+  }).catch(function (e) { b.disabled = false; b.textContent = "Aplicar garantía"; err(e.message); });
+}
+function garDesbloquear(fila, btn, enCuenta) {
+  var pin = window.prompt("El perfil vuelve a la venta. Si le cambiaste el PIN, escríbelo (4 números). Déjalo vacío para no cambiarlo.", "");
+  if (pin === null) return;
+  btn.disabled = true; btn.textContent = "Desbloqueando…";
+  api("adm_gar_desbloquear", { fila: fila, pin: pin }).then(function () {
+    toast("Perfil disponible ✓");
+    if (enCuenta && CACHE.cm) verCm(CACHE.cm.cuenta.id); else VISTAS.garantias();
+  }).catch(function (e) { btn.disabled = false; btn.textContent = "🔓 Desbloquear"; toast(e.message); });
+}
+VISTAS.garantias = function () {
+  cargando("Cargando garantías…");
+  api("adm_garantias").then(function (r) {
+    var s = r.resumen;
+    var h = '<h2>Garantías · este mes</h2><div class="fgrid">' + finKpi("Casos", String(s.casosMes)) + finKpi("Clientes reubicados", String(s.reubicadosMes)) +
+      finKpi("Cuentas nuevas usadas", String(s.cuentasNuevasMes), null, s.cuentasNuevasMes ? "⚠️ subieron costos" : "") +
+      finKpi("Perfiles bloqueados", String(s.bloqueados)) + finKpi("Venta perdida al mes", pesos(s.impactoMensual), null, s.impactoMensual ? "hasta desbloquearlos" : "") + '</div>' +
+      '<div class="card" style="margin-top:12px"><b>¿Cómo hago una garantía?</b><div class="mut" style="margin-top:6px;line-height:1.55">Abre el cliente en 👥 Clientes (o la cuenta en 🏦 Cuentas) y toca <b>🛡 Garantía</b> en su perfil. Primero intenta resolver en el mismo perfil; si hay que moverlo, prefiere la misma cuenta u otra que ya tenga clientes. Bloquea el perfil original solo si de verdad no sirve.</div></div>' +
+      (s.motivos.length ? '<h2 style="margin-top:16px">Motivos del mes</h2><div class="chips">' + s.motivos.map(function (m) { return '<span class="chip">' + esc(m.motivo) + ' · ' + m.n + '</span>'; }).join("") + '</div>' : '') +
+      '<h2 style="margin-top:16px">Perfiles bloqueados (' + r.bloqueados.length + ')</h2>' +
+      (r.bloqueados.length ? r.bloqueados.map(function (b) {
+        return '<div class="card"><div class="row"><b>' + esc(b.plataforma) + '</b><span class="mut">' + esc(b.cuenta) + ' · perfil ' + esc(b.perfil) + '</span><span class="sp"></span><span class="pill bad">−' + pesos(b.lista) + '/mes</span></div>' +
+          (b.motivo ? '<div class="mut" style="margin-top:4px">' + esc(b.motivo) + (b.desde ? ' · ' + esc(b.desde) : '') + '</div>' : '') +
+          '<div class="row" style="margin-top:8px"><button class="btn sm" onclick="garDesbloquear(' + b.fila + ',this)">🔓 Desbloquear</button><button class="btn sec sm" onclick="verCm(\'' + esc(b.cuenta) + '\')">Ver cuenta</button></div></div>';
+      }).join("") : '<div class="empty">No hay perfiles bloqueados</div>') +
+      '<h2 style="margin-top:16px">Historial</h2><div class="card" style="overflow-x:auto">' +
+      (r.casos.length ? '<table class="tp"><tr><th>Cliente</th><th>Cambio</th><th>Impacto</th></tr>' + r.casos.map(function (c) {
+        return '<tr><td>' + (c.tel ? '<a href="#" onclick="verCliente(\'' + esc(c.tel) + '\');return false">' + esc(c.cliente) + '</a>' : esc(c.cliente)) + '<div class="mut">' + esc(c.plataforma) + ' · ' + esc(c.fecha.split(" ")[0]) + '</div></td>' +
+          '<td>' + esc(c.origen) + (c.destino && c.destino !== "—" ? ' → ' + esc(c.destino) : '') + '<div class="mut">' + esc(c.motivo) + '</div></td>' +
+          '<td>' + (c.impacto ? '<span class="vend">−' + pesos(c.impacto) + '/mes</span>' : '<span class="mut">' + esc(c.accion) + '</span>') + (c.cuentaNueva ? '<div class="vend">cuenta nueva</div>' : '') + '</td></tr>';
+      }).join("") + '</table>' : '<div class="empty">Aún no hay garantías registradas</div>') + '</div>';
+    $("vista").innerHTML = h;
+  }).catch(fallo);
+};
+
 VISTAS.ajustes = function () {
   $("vista").innerHTML = '<h2>Ajustes</h2><div class="card"><b>Cambiar PIN de ingreso</b>' +
     '<label class="f">PIN actual</label><input class="in" type="password" id="pA" inputmode="numeric" maxlength="8" autocomplete="current-password">' +
