@@ -175,7 +175,8 @@ function copiar(t) {
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, function () { window.prompt("Copia:", t); });
   else window.prompt("Copia:", t);
 }
-function waUrl(tel, msj) { return "https://wa.me/57" + String(tel).replace(/\D/g, "").slice(-10) + (msj ? "?text=" + encodeURIComponent(msj) : ""); }
+// api.whatsapp.com conserva los emojis (wa.me los daña al redirigir)
+function waUrl(tel, msj) { return "https://api.whatsapp.com/send?phone=57" + String(tel).replace(/\D/g, "").slice(-10) + (msj ? "&text=" + encodeURIComponent(msj) : ""); }
 function guardarSes(v) { try { if (v) sessionStorage.setItem("st25_adm", v); else sessionStorage.removeItem("st25_adm"); } catch (e) {} }
 function leerSes() { try { return sessionStorage.getItem("st25_adm") || ""; } catch (e) { return ""; } }
 function diasTxt(d) {
