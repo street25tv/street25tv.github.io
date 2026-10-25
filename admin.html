@@ -102,6 +102,17 @@ th{color:var(--mut);font-weight:500;font-size:12px}
 td{white-space:nowrap}td:first-child{white-space:normal;min-width:118px;overflow-wrap:anywhere}.pill{white-space:nowrap}
 @media (max-width:520px){table{font-size:12.5px}td,th{padding:7px 4px}}
 tr.tot td{font-weight:700;border-bottom:0}
+.chipf{background:var(--bg2);border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:13px}
+.chipf.on{background:var(--acc2);border-color:transparent;color:#fff}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.f2{grid-template-columns:1fr;gap:0}}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin-top:10px;font-size:14px}
+.kv span{color:var(--mut)}.kv b{font-weight:500;overflow-wrap:anywhere}
+.acciones{display:flex;flex-wrap:wrap;gap:8px}
+.acc-form{margin-top:12px;border-color:var(--acc2)}
+.mov{padding:8px 0;border-top:1px dashed var(--line)}.mov select{margin-top:6px}
+input.pin{width:64px;padding:6px 6px;text-align:center}
+.tp td{white-space:normal}.tp td:first-child{min-width:0;width:56px}.tp td:last-child{white-space:nowrap;width:1%}
 .oculto{display:none!important}
 .cuenta{border-top:1px dashed var(--line);padding-top:8px;margin-top:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
@@ -581,16 +592,223 @@ VISTAS.inventario = function () {
 VISTAS.cuentas = function () {
   cargando();
   api("adm_cuentas").then(function (r) {
-    $("vista").innerHTML = '<h2>Cuentas madre (' + r.cuentas.length + ')</h2>' + (r.cuentas.length ? r.cuentas.map(function (c, i) {
-      var id = "cm" + i; CACHE[id] = "Correo: " + c.correo + "\nContraseña: " + c.clave;
-      return '<div class="card"><div class="row"><b>' + esc(c.plataforma) + '</b><span class="mut">' + esc(c.id) + '</span><span class="sp"></span>' +
-        (c.caida ? '<span class="pill bad">caída</span> ' : '') + diasTxt(c.dias) + '</div>' +
-        '<div style="margin-top:6px">📧 ' + esc(c.correo) + '</div>' +
-        '<div class="row mut" style="margin-top:4px"><span>👥 ' + c.ocupados + '/' + c.perfiles + ' perfiles vendidos</span>' + (c.costo ? '<span>· 💵 costo ' + esc(c.costo) + '</span>' : '') + (c.vence ? '<span>· 📅 vence ' + esc(c.vence) + '</span>' : '') + '</div>' +
-        '<div class="row" style="margin-top:8px"><button class="btn sec sm" onclick="copiar(CACHE[\'' + id + '\'])">Copiar acceso</button></div></div>';
-    }).join("") : '<div class="card empty">No encontré cuentas madre</div>');
+    CACHE.cms = r.cuentas; CACHE.cmSug = r.sugerencias || []; CACHE.cmFiltro = CACHE.cmFiltro || "todas";
+    var n = function (f) { return r.cuentas.filter(f).length; };
+    var res = {
+      todas: r.cuentas.length,
+      vencer: n(function (c) { return !c.caida && c.dias !== null && c.dias >= 0 && c.dias <= 5; }),
+      vencidas: n(function (c) { return !c.caida && c.dias !== null && c.dias < 0; }),
+      caidas: n(function (c) { return c.caida; }),
+      libres: r.cuentas.reduce(function (s, c) { return s + (c.caida ? 0 : c.perfiles - c.ocupados); }, 0)
+    };
+    var plats = {}; r.cuentas.forEach(function (c) { plats[c.plataforma] = 1; });
+    var chip = function (k, t) { return '<button class="chipf' + (CACHE.cmFiltro === k ? ' on' : '') + '" onclick="CACHE.cmFiltro=\'' + k + '\';filtrarCm()">' + t + '</button>'; };
+    $("vista").innerHTML = '<div class="row" style="margin-bottom:12px"><h2 style="margin:0">Cuentas madre</h2><span class="sp"></span><button class="btn" onclick="formCm()">＋ Nueva cuenta</button></div>' +
+      '<div class="fgrid">' + finKpi("Cuentas", res.todas) + finKpi("Por vencer (≤5 d)", res.vencer) + finKpi("Vencidas", res.vencidas) + finKpi("Caídas", res.caidas) + finKpi("Perfiles libres", res.libres) + '</div>' +
+      '<div class="card" style="margin-top:12px"><input class="in" id="cmQ" placeholder="Buscar por ID, correo o proveedor" autocomplete="off" oninput="filtrarCm()">' +
+      '<div class="row" style="margin-top:10px">' + chip("todas", "Todas") + chip("vencer", "⏳ Por vencer") + chip("vencidas", "⛔ Vencidas") + chip("caidas", "🚨 Caídas") +
+      '<span class="sp"></span><select class="in" id="cmP" style="width:auto" onchange="filtrarCm()"><option value="">Todas las plataformas</option>' +
+      Object.keys(plats).sort().map(function (p) { return '<option>' + esc(p) + '</option>'; }).join("") + '</select></div></div><div id="cmLista"></div>';
+    filtrarCm();
   }).catch(fallo);
 };
+function filtrarCm() {
+  var q = normTxt($("cmQ") ? $("cmQ").value.trim() : ""), pl = $("cmP") ? $("cmP").value : "", f = CACHE.cmFiltro;
+  [].forEach.call(document.querySelectorAll(".chipf"), function (b) { b.classList.toggle("on", b.getAttribute("onclick").indexOf("'" + f + "'") !== -1); });
+  var l = (CACHE.cms || []).filter(function (c) {
+    if (pl && c.plataforma !== pl) return false;
+    if (f === "vencer" && !(!c.caida && c.dias !== null && c.dias >= 0 && c.dias <= 5)) return false;
+    if (f === "vencidas" && !(!c.caida && c.dias !== null && c.dias < 0)) return false;
+    if (f === "caidas" && !c.caida) return false;
+    return !q || normTxt(c.id + " " + c.correo + " " + (c.proveedor || "") + " " + c.plataforma).indexOf(q) !== -1;
+  });
+  $("cmLista").innerHTML = '<div class="mut" style="margin:0 0 8px 4px">' + l.length + ' cuentas</div>' + (l.length ? l.map(function (c) {
+    var pct = c.perfiles ? Math.round(c.ocupados * 100 / c.perfiles) : 0;
+    return '<div class="card" style="cursor:pointer" onclick="verCm(\'' + esc(c.id) + '\')"><div class="row"><b>' + esc(c.plataforma) + '</b><span class="mut">' + esc(c.id) + '</span><span class="sp"></span>' +
+      (c.caida ? '<span class="pill bad">🚨 caída</span>' : diasTxt(c.dias)) + '</div>' +
+      '<div style="margin-top:6px;overflow-wrap:anywhere">📧 ' + esc(c.correo) + '</div>' +
+      '<div class="row mut" style="margin-top:4px"><span>👥 ' + c.ocupados + '/' + c.perfiles + ' vendidos</span>' + (c.vence ? '<span>· 📅 ' + esc(c.vence) + '</span>' : '') + (dinero(c.costo) ? '<span>· 💵 ' + pesos(dinero(c.costo)) + '</span>' : '') + (c.proveedor ? '<span>· 🏪 ' + esc(c.proveedor) + '</span>' : '') + '</div>' +
+      '<div class="bar"><i style="width:' + pct + '%"></i></div></div>';
+  }).join("") : '<div class="card empty">Sin resultados</div>');
+}
+function dinero(v) { if (typeof v === "number") return v; return Number(String(v || "").replace(/[^\d.,-]/g, "").replace(/[.,]\d{1,2}$/, "").replace(/\D/g, "")) || 0; }
+function hoyISO(dias) { var d = new Date(); d.setDate(d.getDate() + (dias || 0)); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+function volverCm() { return '<div class="row" style="margin-bottom:10px"><button class="btn sec sm" onclick="ir(\'cuentas\')">← Cuentas madre</button></div>'; }
+function msgLista(ms, titulo) {
+  if (!ms || !ms.length) return "";
+  return '<h2 style="margin-top:16px">' + esc(titulo || "Mensajes para los clientes") + ' (' + ms.length + ')</h2>' + ms.map(function (m) { return msgBox(m, m.nombre || "Cliente"); }).join("");
+}
+
+// ----- Nueva cuenta -----
+function formCm() {
+  VISTA = "cuentas"; pintarTabs(); window.scrollTo(0, 0);
+  var sug = CACHE.cmSug || [];
+  $("vista").innerHTML = volverCm() + '<h2>Nueva cuenta madre</h2><div class="card">' +
+    '<div class="f2"><div><label class="f">Plataforma *</label><input class="in" id="nPl" list="nPls" placeholder="Netflix" oninput="sugerirCm()"><datalist id="nPls">' + sug.map(function (s) { return '<option value="' + esc(s.plataforma) + '">'; }).join("") + '</datalist></div>' +
+    '<div><label class="f">ID de la cuenta *</label><input class="in" id="nId" placeholder="NF - 005"></div></div>' +
+    '<div class="f2"><div><label class="f">N.º de perfiles *</label><input class="in" id="nN" type="number" min="1" max="20" value="5"></div>' +
+    '<div><label class="f">Precio por perfil *</label><input class="in" id="nPr" inputmode="numeric" placeholder="13000"></div></div>' +
+    '<div class="f2"><div><label class="f">Correo / login</label><input class="in" id="nCo" autocomplete="off"></div><div><label class="f">Contraseña</label><input class="in" id="nCl" autocomplete="off"></div></div>' +
+    '<div class="f2"><div><label class="f">Proveedor</label><input class="in" id="nPv"></div><div><label class="f">Costo de compra</label><input class="in" id="nCs" inputmode="numeric" placeholder="0"></div></div>' +
+    '<div class="f2"><div><label class="f">Fecha de compra</label><input class="in" id="nFc" type="date" value="' + hoyISO(0) + '"></div><div><label class="f">Vence la cuenta</label><input class="in" id="nFv" type="date" value="' + hoyISO(30) + '"></div></div>' +
+    '<div class="mut" style="margin-top:8px">Se crean los perfiles en el Inventario (los PIN quedan vacíos; los pones después en el detalle). El costo queda registrado en Pagos Proveedor.</div>' +
+    '<div class="err" id="nErr"></div><button class="btn" id="nBtn" style="margin-top:12px" onclick="crearCm()">Crear cuenta y perfiles</button><div id="nRes"></div></div>';
+}
+function sugerirCm() {
+  var p = normTxt($("nPl").value.trim()), s = (CACHE.cmSug || []).filter(function (x) { return normTxt(x.plataforma) === p; })[0];
+  if (!s) return;
+  if (!$("nId").value && s.siguienteId) $("nId").value = s.siguienteId;
+  if (!$("nPr").value && s.precio) $("nPr").value = s.precio;
+}
+function crearCm() {
+  var v = function (id) { return $(id).value.trim(); }, err = function (t) { $("nErr").textContent = t; };
+  var d = { plataforma: v("nPl"), id: v("nId"), perfiles: v("nN"), precio: v("nPr").replace(/\D/g, ""), correo: v("nCo"), clave: v("nCl"), proveedor: v("nPv"), costo: v("nCs").replace(/\D/g, ""), compra: v("nFc"), vence: v("nFv") };
+  if (!d.plataforma || !d.id || !d.perfiles || !d.precio) return err("Completa los campos con *.");
+  if (!confirm("¿Crear la cuenta " + d.id + " (" + d.plataforma + ") con " + d.perfiles + " perfiles?")) return;
+  err(""); var b = $("nBtn"); b.disabled = true; b.textContent = "Creando…";
+  api("adm_cm_crear", d).then(function (r) {
+    toast("Cuenta creada ✓"); CACHE.cmFiltro = "todas"; verCm(r.id);
+  }).catch(function (e) { b.disabled = false; b.textContent = "Crear cuenta y perfiles"; err(e.message); });
+}
+
+// ----- Detalle -----
+function verCm(id) {
+  VISTA = "cuentas"; pintarTabs(); window.scrollTo(0, 0);
+  cargando("Cargando cuenta…");
+  api("adm_cm_detalle", { id: id }).then(function (r) {
+    CACHE.cm = r; var c = r.cuenta, s = r.resumen;
+    CACHE.cmAcc = "📺 " + c.plataforma + "\n📧 Correo: " + c.correo + "\n🔑 Contraseña: " + c.clave;
+    var estado = c.caida ? '<span class="pill bad">🚨 caída</span>' : diasTxt(c.dias);
+    var h = volverCm() +
+      '<div class="card"><div class="row"><h2 style="margin:0">' + esc(c.plataforma) + ' · ' + esc(c.id) + '</h2><span class="sp"></span>' + estado + '</div>' +
+      '<div class="kv"><span>📧 Correo</span><b>' + esc(c.correo || "—") + '</b><span>🔑 Contraseña</span><b>' + esc(c.clave || "—") + '</b>' +
+      '<span>🏪 Proveedor</span><b>' + esc(c.proveedor || "—") + '</b><span>💵 Último costo</span><b>' + (c.costo ? pesos(c.costo) : "—") + '</b>' +
+      '<span>🛒 Compra</span><b>' + esc(c.compra || "—") + '</b><span>📅 Vence</span><b>' + esc(c.vence || "—") + '</b></div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn sec sm" onclick="copiar(CACHE.cmAcc)">Copiar acceso</button></div></div>' +
+      '<div class="fgrid">' + finKpi("Perfiles vendidos", s.ocupados + "/" + s.total) + finKpi("Ingreso mensual", pesos(s.ingreso)) + finKpi("Costo", pesos(s.costo)) +
+      finKpi("Deja al mes", pesosS(s.utilidad), null, s.utilidad < 0 ? "⚠️ en pérdida" : "") + '</div>' +
+      '<h2 style="margin-top:18px">Acciones</h2><div class="acciones">' +
+      '<button class="btn" onclick="accCm(\'renovar\')">🔁 Renovar (pago proveedor)</button>' +
+      '<button class="btn sec" onclick="accCm(\'cred\')">🔑 Cambiar correo / contraseña</button>' +
+      '<button class="btn sec" onclick="accCm(\'editar\')">✏️ Editar datos</button>' +
+      '<button class="btn sec" onclick="accCm(\'agregar\')">➕ Agregar perfiles</button>' +
+      '<button class="btn sec" onclick="accCm(\'mover\')">🔄 Mover clientes</button>' +
+      (c.caida ? '<button class="btn ok" onclick="reactivarCm()">✅ Reactivar cuenta</button>' : '<button class="btn bad" onclick="accCm(\'caida\')">🚨 Cuenta caída</button>') +
+      '<button class="btn bad" onclick="accCm(\'eliminar\')">🗑 Eliminar</button></div>' +
+      '<div id="accBox"></div>' +
+      '<h2 style="margin-top:18px">Perfiles (' + r.perfiles.length + ')</h2><div class="card" style="overflow-x:auto"><table class="tp"><tr><th>Perfil</th><th>Cliente</th><th>PIN</th></tr>' +
+      r.perfiles.map(function (p) {
+        return '<tr id="pf_' + p.fila + '"><td><b>' + esc(p.perfil) + '</b><div class="mut">' + pesos(p.precio) + '</div></td><td>' +
+          (p.cliente ? '<a href="#" onclick="verCliente(\'' + esc(p.contacto) + '\');return false">' + esc(p.cliente) + '</a><div class="mut">' + esc(p.contacto) + ' · vence ' + esc(p.vence) + '</div><div style="margin-top:4px">' + diasTxt(p.dias) + '</div>' : '<span class="pill ok">libre</span>') + '</td>' +
+          '<td><div class="row" style="gap:6px;flex-wrap:nowrap"><input class="in pin" value="' + esc(p.pin) + '" maxlength="4" inputmode="numeric" placeholder="—"><button class="btn sec sm" title="Guardar PIN" onclick="pinCm(' + p.fila + ',this)">💾</button></div></td></tr>';
+      }).join("") + '</table><div id="pinRes"></div></div>' +
+      '<h2 style="margin-top:18px">Pagos al proveedor</h2><div class="card" style="overflow-x:auto">' + (r.pagos.length ? '<table><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th>Nuevo vence</th></tr>' + r.pagos.map(function (x) {
+        return '<tr><td>' + esc(x.fecha) + '</td><td>' + esc(x.tipo) + (x.proveedor ? '<div class="mut">' + esc(x.proveedor) + '</div>' : '') + '</td><td>' + pesos(x.monto) + '</td><td>' + esc(x.nuevo || "—") + '</td></tr>';
+      }).join("") + '</table>' : '<div class="empty">Sin pagos registrados</div>') + '</div>';
+    $("vista").innerHTML = h;
+  }).catch(fallo);
+}
+function accCm(tipo) {
+  var r = CACHE.cm, c = r.cuenta, box = $("accBox"), h = "";
+  var form = function (titulo, cuerpo, boton, fn, cls) {
+    return '<div class="card acc-form"><div class="row"><b>' + titulo + '</b><span class="sp"></span><button class="btn sec sm" onclick="$(\'accBox\').innerHTML=\'\'">Cerrar</button></div>' + cuerpo +
+      '<div class="err" id="aErr"></div><button class="btn ' + (cls || "") + '" id="aBtn" style="margin-top:12px" onclick="' + fn + '">' + boton + '</button><div id="aRes"></div></div>';
+  };
+  if (tipo === "renovar") h = form("🔁 Renovar cuenta (pago al proveedor)",
+    '<div class="f2"><div><label class="f">Días que suma</label><input class="in" id="aDias" type="number" min="1" max="366" value="30"></div><div><label class="f">Monto pagado</label><input class="in" id="aMonto" inputmode="numeric" value="' + (c.costo || "") + '"></div></div>' +
+    '<label class="f">Fecha del pago</label><input class="in" id="aFecha" type="date" value="' + hoyISO(0) + '">' +
+    '<div class="mut" style="margin-top:8px">Si la cuenta aún no vence, los días se suman desde ' + esc(c.vence || "hoy") + '; si ya venció, desde hoy. El pago queda en Pagos Proveedor y en Finanzas.</div>', "Registrar renovación", "renovarCm()");
+  else if (tipo === "cred") h = form("🔑 Cambiar correo / contraseña",
+    '<div class="f2"><div><label class="f">Correo / login</label><input class="in" id="aCo" value="' + esc(c.correo) + '" autocomplete="off"></div><div><label class="f">Contraseña nueva</label><input class="in" id="aCl" value="' + esc(c.clave) + '" autocomplete="off"></div></div>' +
+    '<div class="mut" style="margin-top:8px">Se cambia en la cuenta y en sus ' + r.perfiles.length + ' perfiles. Te dejo listo el mensaje para cada cliente afectado (' + r.resumen.ocupados + ').</div>', "Guardar y preparar mensajes", "credCm()");
+  else if (tipo === "editar") h = form("✏️ Editar datos de la cuenta",
+    '<div class="f2"><div><label class="f">Proveedor</label><input class="in" id="aPv" value="' + esc(c.proveedor) + '"></div><div><label class="f">Último costo (corrige sin registrar pago)</label><input class="in" id="aCs" inputmode="numeric" value="' + (c.costo || "") + '"></div></div>' +
+    '<div class="f2"><div><label class="f">Fecha de compra</label><input class="in" id="aFc" type="date" value="' + esc(c.compraISO) + '"></div><div><label class="f">Vence la cuenta</label><input class="in" id="aFv" type="date" value="' + esc(c.venceISO) + '"></div></div>', "Guardar cambios", "editarCm()");
+  else if (tipo === "agregar") h = form("➕ Agregar perfiles a la cuenta",
+    '<div class="f2"><div><label class="f">Cuántos</label><input class="in" id="aN" type="number" min="1" max="10" value="1"></div><div><label class="f">Precio por perfil</label><input class="in" id="aPr" inputmode="numeric" value="' + ((r.perfiles[0] || {}).precio || "") + '"></div></div>' +
+    '<div class="mut" style="margin-top:8px">Se numeran después del último perfil y toman el correo y la contraseña de la cuenta.</div>', "Agregar perfiles", "agregarCm()");
+  else if (tipo === "mover" || tipo === "caida") {
+    var ocup = r.perfiles.filter(function (p) { return p.cliente; }), usados = {};
+    var filas = ocup.map(function (p) {
+      var auto = ""; r.libres.forEach(function (l) { if (!auto && !usados[l.fila]) auto = l.fila; }); if (auto && tipo === "caida") usados[auto] = 1; else auto = "";
+      return '<div class="mov"><div>👤 <b>' + esc(p.cliente) + '</b> <span class="mut">perfil ' + esc(p.perfil) + ' · vence ' + esc(p.vence) + '</span></div><select class="in" data-from="' + p.fila + '"><option value="">— No mover —</option>' +
+        r.libres.map(function (l) { return '<option value="' + l.fila + '"' + (String(l.fila) === String(auto) ? " selected" : "") + '>→ ' + esc(l.cuenta) + ' · perfil ' + esc(l.perfil) + ' (' + esc(l.nombre) + ')</option>'; }).join("") + '</select></div>';
+    }).join("");
+    var cuerpo = (ocup.length ? '<div class="mut" style="margin:6px 0 10px">' + ocup.length + ' cliente(s) en esta cuenta · ' + r.libres.length + ' perfiles libres de ' + esc(c.plataforma) + ' en otras cuentas.</div>' + filas : '<div class="mut" style="margin-top:8px">Esta cuenta no tiene clientes.</div>') +
+      (ocup.length && !r.libres.length ? '<div class="err">⚠️ No hay perfiles libres de ' + esc(c.plataforma) + ' en otras cuentas. Crea o agrega perfiles primero.</div>' : '') +
+      '<label class="chk" style="display:flex;gap:8px;margin-top:12px"><input type="checkbox" id="aMarcar"' + (tipo === "caida" ? " checked" : "") + '> Marcar ' + esc(c.id) + ' como CAÍDA (deja de venderse)</label>' +
+      '<div class="mut" style="margin-top:6px">Cada cliente movido conserva su fecha de vencimiento y te dejo su mensaje con los datos nuevos.</div>';
+    h = form(tipo === "caida" ? "🚨 Cuenta caída" : "🔄 Mover clientes a otra cuenta", cuerpo, tipo === "caida" ? "Procesar cuenta caída" : "Mover clientes", "caidaCm()", tipo === "caida" ? "bad" : "");
+  } else if (tipo === "eliminar") h = form("🗑 Eliminar cuenta",
+    (r.resumen.ocupados ? '<div class="err">Esta cuenta tiene ' + r.resumen.ocupados + ' cliente(s). Muévelos primero con “Mover clientes”.</div>' : '') +
+    '<div class="mut" style="margin-top:8px">Se borran la cuenta y sus ' + r.perfiles.length + ' perfiles del Inventario. Esto no se puede deshacer. Escribe el ID para confirmar:</div><input class="in" id="aConf" placeholder="' + esc(c.id) + '" style="margin-top:8px">', "Eliminar definitivamente", "eliminarCm()", "bad");
+  box.innerHTML = h;
+  box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function accEnviar(accion, datos, ok) {
+  var b = $("aBtn"), txt = b.textContent, err = function (t) { $("aErr").textContent = t; };
+  err(""); b.disabled = true; b.textContent = "Procesando…";
+  return api(accion, datos).then(function (r) { b.textContent = "✓ Listo"; ok(r); }).catch(function (e) { b.disabled = false; b.textContent = txt; err(e.message); });
+}
+function renovarCm() {
+  var c = CACHE.cm.cuenta, monto = $("aMonto").value.replace(/\D/g, "");
+  if (!monto) return $("aErr").textContent = "Escribe el monto pagado.";
+  if (!confirm("¿Registrar pago de " + pesos(monto) + " y sumar " + $("aDias").value + " días a " + c.id + "?")) return;
+  accEnviar("adm_cm_renovar", { id: c.id, dias: $("aDias").value, monto: monto, fecha: $("aFecha").value }, function (r) { toast("Cuenta renovada ✓"); verCm(c.id); });
+}
+function credCm() {
+  var c = CACHE.cm.cuenta, co = $("aCo").value.trim(), cl = $("aCl").value.trim();
+  if (!co || !cl) return $("aErr").textContent = "Escribe el correo y la contraseña.";
+  if (!confirm("¿Cambiar el acceso de " + c.id + " en sus " + CACHE.cm.perfiles.length + " perfiles?")) return;
+  accEnviar("adm_cm_cred", { id: c.id, correo: co, clave: cl }, function (r) {
+    $("aRes").innerHTML = '<div style="margin-top:10px"><span class="pill ok">' + r.perfiles + ' perfiles actualizados</span></div>' + msgLista(r.mensajes, "Avisa a tus clientes");
+    CACHE.cm.cuenta.correo = co; CACHE.cm.cuenta.clave = cl; CACHE.cmAcc = "📺 " + c.plataforma + "\n📧 Correo: " + co + "\n🔑 Contraseña: " + cl;
+    toast("Acceso actualizado ✓");
+  });
+}
+function editarCm() {
+  var c = CACHE.cm.cuenta;
+  accEnviar("adm_cm_editar", { id: c.id, proveedor: $("aPv").value.trim(), costo: $("aCs").value.replace(/\D/g, ""), compra: $("aFc").value, vence: $("aFv").value }, function () { toast("Cambios guardados ✓"); verCm(c.id); });
+}
+function agregarCm() {
+  var c = CACHE.cm.cuenta, n = $("aN").value, pr = $("aPr").value.replace(/\D/g, "");
+  if (!pr) return $("aErr").textContent = "Escribe el precio por perfil.";
+  if (!confirm("¿Agregar " + n + " perfil(es) a " + c.id + "?")) return;
+  accEnviar("adm_cm_agregar", { id: c.id, n: n, precio: pr }, function () { toast("Perfiles agregados ✓"); verCm(c.id); });
+}
+function caidaCm() {
+  var c = CACHE.cm.cuenta, movs = [], vistos = {}, dup = false;
+  [].forEach.call(document.querySelectorAll("#accBox select[data-from]"), function (s) { if (!s.value) return; if (vistos[s.value]) dup = true; vistos[s.value] = 1; movs.push({ from: Number(s.getAttribute("data-from")), to: Number(s.value) }); });
+  var marcar = $("aMarcar").checked;
+  if (dup) return $("aErr").textContent = "Dos clientes tienen el mismo perfil destino.";
+  if (!movs.length && !marcar) return $("aErr").textContent = "Elige al menos un cliente para mover o marca la cuenta como caída.";
+  if (!confirm("¿Confirmas? Se moverán " + movs.length + " cliente(s)" + (marcar ? " y " + c.id + " quedará como CAÍDA." : "."))) return;
+  accEnviar("adm_cm_caida", { id: c.id, movs: movs, marcar: marcar }, function (r) {
+    $("accBox").innerHTML = '<div class="card"><b>✅ Listo</b><pre class="acc">' + esc(r.texto) + '</pre>' + msgLista(r.mensajes, "Envía a cada cliente sus datos nuevos") +
+      '<button class="btn sec sm" style="margin-top:10px" onclick="verCm(\'' + esc(c.id) + '\')">Ver la cuenta actualizada</button></div>';
+    toast("Listo ✓");
+  });
+}
+function reactivarCm() {
+  var c = CACHE.cm.cuenta;
+  if (!confirm("¿Quitar la marca de caída a " + c.id + "? Sus perfiles libres vuelven a venderse.")) return;
+  api("adm_cm_reactivar", { id: c.id }).then(function () { toast("Cuenta reactivada ✓"); verCm(c.id); }).catch(function (e) { toast(e.message); });
+}
+function eliminarCm() {
+  var c = CACHE.cm.cuenta, conf = $("aConf").value.trim();
+  if (normTxt(conf).replace(/\s+/g, "") !== normTxt(c.id).replace(/\s+/g, "")) return $("aErr").textContent = "Escribe el ID exacto: " + c.id;
+  if (!confirm("Última confirmación: ¿eliminar " + c.id + " y sus perfiles?")) return;
+  accEnviar("adm_cm_eliminar", { id: c.id, confirmar: conf }, function () { toast("Cuenta eliminada"); ir("cuentas"); });
+}
+function pinCm(fila, btn) {
+  var inp = $("pf_" + fila).querySelector("input.pin"), pin = inp.value.replace(/\D/g, "");
+  if (pin && pin.length !== 4) return toast("El PIN debe tener 4 números");
+  btn.disabled = true; btn.textContent = "…";
+  api("adm_cm_pin", { id: CACHE.cm.cuenta.id, fila: fila, pin: pin }).then(function (r) {
+    btn.disabled = false; btn.textContent = "✓"; setTimeout(function () { btn.textContent = "💾"; }, 1500); toast("PIN guardado ✓");
+    $("pinRes").innerHTML = msgLista(r.mensajes, "Avisa al cliente del nuevo PIN");
+  }).catch(function (e) { btn.disabled = false; btn.textContent = "💾"; toast(e.message); });
+}
 
 // ---------- Ajustes ----------
 VISTAS.ajustes = function () {
