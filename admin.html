@@ -986,13 +986,31 @@ VISTAS.cuentas = function () {
     var chip = function (k, t) { return '<button class="chipf' + (CACHE.cmFiltro === k ? ' on' : '') + '" onclick="CACHE.cmFiltro=\'' + k + '\';filtrarCm()">' + t + '</button>'; };
     $("vista").innerHTML = '<div class="row" style="margin-bottom:12px"><h2 style="margin:0">Cuentas madre</h2><span class="sp"></span><button class="btn" onclick="formCm()">＋ Nueva cuenta</button></div>' +
       '<div class="fgrid">' + finKpi("Cuentas", res.todas) + finKpi("Por vencer (≤5 d)", res.vencer) + finKpi("Vencidas", res.vencidas) + finKpi("Caídas", res.caidas) + finKpi("Perfiles libres", res.libres) + '</div>' +
+      '<div id="calCm"></div>' +
       '<div class="card" style="margin-top:12px"><input class="in" id="cmQ" placeholder="Buscar por ID, correo o proveedor" autocomplete="off" oninput="filtrarCm()">' +
       '<div class="row" style="margin-top:10px">' + chip("todas", "Todas") + chip("vencer", "⏳ Por vencer") + chip("vencidas", "⛔ Vencidas") + chip("caidas", "🚨 Caídas") +
       '<span class="sp"></span><select class="in" id="cmP" style="width:auto" onchange="filtrarCm()"><option value="">Todas las plataformas</option>' +
       Object.keys(plats).sort().map(function (p) { return '<option>' + esc(p) + '</option>'; }).join("") + '</select></div></div><div id="cmLista"></div>';
-    filtrarCm();
+    filtrarCm(); calCargar();
   }).catch(fallo);
 };
+// Calendario: qué cuentas madre pagar primero (vencen antes y tienen más clientes)
+function calCargar() {
+  var box = $("calCm"); if (!box) return;
+  box.innerHTML = '<div class="load">Armando calendario de pagos…</div>';
+  api("adm_calendario_cm").then(function (r) {
+    var s = r.resumen || {};
+    if (!r.cuentas.length) { box.innerHTML = '<div class="card" style="margin-top:12px">📅 Ninguna cuenta madre vence en los próximos 14 días.</div>'; return; }
+    box.innerHTML = '<h2 style="margin-top:18px">📅 Pagos de cuentas madre · próximos 14 días</h2><div class="mut" style="margin:-6px 2px 10px">Ordenadas por urgencia: primero las vencidas, luego las que vencen antes y, a igual fecha, las que tienen más clientes.</div>' +
+      '<div class="fgrid">' + finKpi("A pagar esta semana", pesos(s.pagarSemana), null, (s.vencidas ? s.vencidas + " vencida(s) · " : "") + s.semana + " vence(n) en 7 días") +
+      finKpi("Clientes en riesgo", String(s.clientesEnRiesgo), null, "en cuentas que vencen en ≤7 días") + finKpi("Total 14 días", pesos(s.pagar14)) + '</div>' +
+      '<div class="card" style="margin-top:10px">' + r.cuentas.map(function (c) {
+        return '<div style="padding:10px 0;border-top:1px solid var(--line)"><div><b>' + esc(c.id) + ' · ' + esc(c.plataforma) + '</b><div class="mut fs">' + esc(c.proveedor || "sin proveedor") + ' · vence ' + esc(c.vence) + ' · ' + c.clientes + '/' + c.perfiles + ' clientes · costo ' + pesos(c.costo) + ' · deja ' + (c.deja < 0 ? '−' : '') + pesos(Math.abs(c.deja)) + '</div>' +
+          (c.sinRespaldo && c.clientes ? '<div class="vend" style="white-space:normal;margin-top:4px">⚠️ Si se cae, solo hay ' + c.libresOtras + ' perfil(es) libre(s) de ' + esc(c.plataforma) + ' para mover a sus ' + c.clientes + ' clientes</div>' : '') + '</div>' +
+          '<div class="row" style="margin-top:6px;gap:6px">' + diasTxt(c.dias) + '<button class="btn sm" onclick="verCm(\'' + esc(c.id) + '\', \'renovar\')">🔁 Pagar</button></div></div>';
+      }).join("") + '</div>';
+  }).catch(function (e) { box.innerHTML = '<div class="err">Calendario: ' + esc(e.message) + '</div>'; });
+}
 function filtrarCm() {
   var q = normTxt($("cmQ") ? $("cmQ").value.trim() : ""), pl = $("cmP") ? $("cmP").value : "", f = CACHE.cmFiltro;
   [].forEach.call(document.querySelectorAll(".chipf"), function (b) { b.classList.toggle("on", b.getAttribute("onclick").indexOf("'" + f + "'") !== -1); });
@@ -1058,7 +1076,7 @@ function crearCm() {
 }
 
 // ----- Detalle -----
-function verCm(id) {
+function verCm(id, abrirAcc) {
   VISTA = "cuentas"; pintarTabs(); window.scrollTo(0, 0);
   cargando("Cargando cuenta…");
   api("adm_cm_detalle", { id: id }).then(function (r) {
@@ -1093,6 +1111,7 @@ function verCm(id) {
         return '<tr><td>' + esc(x.fecha) + '</td><td>' + esc(x.tipo) + (x.proveedor ? '<div class="mut">' + esc(x.proveedor) + '</div>' : '') + '</td><td>' + pesos(x.monto) + '</td><td>' + esc(x.nuevo || "—") + '</td></tr>';
       }).join("") + '</table>' : '<div class="empty">Sin pagos registrados</div>') + '</div>';
     $("vista").innerHTML = h;
+    if (abrirAcc) accCm(abrirAcc);
   }).catch(fallo);
 }
 function accCm(tipo) {
