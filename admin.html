@@ -920,9 +920,11 @@ VISTAS.inventario = function () {
   cargando();
   api("adm_inventario").then(function (r) {
     var libres = r.plataformas.reduce(function (s, p) { return s + p.libres; }, 0);
-    $("vista").innerHTML = '<h2>Inventario · ' + libres + ' perfiles libres</h2>' + r.plataformas.map(function (p) {
-      return '<div class="card"><div class="row"><b>' + esc(p.plataforma) + '</b><span class="sp"></span><span class="mut">' + p.ocupados + ' vendidos · </span>' +
+    CACHE.invPlats = r.plataformas;
+    $("vista").innerHTML = '<h2>Inventario · ' + libres + ' perfiles libres</h2>' + r.plataformas.map(function (p, ip) {
+      return '<div class="card" id="ip_' + ip + '"><div class="row"><b>' + esc(p.plataforma) + '</b><span class="sp"></span><span class="mut">' + p.ocupados + ' vendidos · </span>' +
         (p.libres ? '<span class="pill ok">' + p.libres + ' libres</span>' : '<span class="pill bad">agotado</span>') + '</div>' +
+        '<div class="row" style="margin-top:8px"><button class="btn sec sm" onclick="valorForm(' + ip + ')">💲 Valor del perfil</button></div><div class="res"></div>' +
         p.cuentas.map(function (c) {
           return '<div class="cuenta"><div class="row"><span>📧 ' + esc(c.nombre) + '</span>' + (c.caida ? '<span class="pill bad">caída</span>' : '') + '<span class="sp"></span><span class="mut">' + c.perfiles.length + ' libres</span></div>' +
             '<div class="chips">' + c.perfiles.map(function (x) { return '<span class="chip">Perfil ' + esc(x.perfil) + (x.pin ? ' · PIN ' + esc(x.pin) : '') + '</span>'; }).join("") + '</div></div>';
@@ -930,6 +932,42 @@ VISTAS.inventario = function () {
     }).join("");
   }).catch(fallo);
 };
+
+// Cambiar el valor del perfil de toda una plataforma: las renovaciones se cobran a este valor
+function valorForm(ip) {
+  var p = CACHE.invPlats[ip], box = $("ip_" + ip).querySelector(".res");
+  box.innerHTML = '<div class="load">Revisando perfiles…</div>';
+  api("adm_valor_perfil", { base: p.base, tipo: p.tipo }).then(function (r) {
+    CACHE["vp" + ip] = r;
+    box.innerHTML = '<div class="card acc-form" style="margin-top:10px"><div class="row"><b>💲 Valor del perfil · ' + esc(r.plataforma) + '</b><span class="sp"></span><button class="btn sec sm" onclick="this.closest(\'.acc-form\').remove()">Cerrar</button></div>' +
+      '<div class="mut" style="margin-top:4px">' + r.perfiles + ' perfiles (' + r.ocupados + ' con cliente). Valor actual: ' + r.actuales.map(function (a) { return '<b>' + pesos(a.valor) + '</b>' + (r.actuales.length > 1 ? ' (' + a.n + ')' : ''); }).join(" · ") + '</div>' +
+      '<label class="f">Nuevo valor del perfil</label><input class="in" id="vpV_' + ip + '" inputmode="numeric" placeholder="Ej.: 17000" value="' + ((r.actuales[0] || {}).valor || "") + '" oninput="clearTimeout(valorForm.t);valorForm.t=setTimeout(function(){valorVer(' + ip + ')},500)">' +
+      '<label class="gopt"><input type="checkbox" id="vpT_' + ip + '" checked><span>Actualizar también el precio de venta en la tienda</span></label>' +
+      (r.formulas ? '<div class="mut fs" style="margin-top:6px">' + r.formulas + ' perfil(es) tienen fórmula en la columna F y no se tocan.</div>' : '') +
+      '<div class="gimp" id="vpI_' + ip + '">Escribe el nuevo valor para ver el impacto.</div>' +
+      '<div class="err" id="vpE_' + ip + '"></div><button class="btn" style="margin-top:10px" onclick="valorAplicar(' + ip + ',this)">Aplicar a ' + r.perfiles + ' perfiles</button><div id="vpR_' + ip + '"></div></div>';
+  }).catch(function (e) { box.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+}
+function valorVer(ip) {
+  var p = CACHE.invPlats[ip], v = $("vpV_" + ip).value.replace(/\D/g, "");
+  if (!v) return;
+  api("adm_valor_perfil", { base: p.base, tipo: p.tipo, valor: v }).then(function (r) {
+    if ($("vpV_" + ip).value.replace(/\D/g, "") !== v) return;
+    $("vpI_" + ip).className = "gimp" + (r.afectados ? " warn" : "");
+    $("vpI_" + ip).innerHTML = r.afectados ? '<b>Impacto:</b> ' + r.afectados + ' cliente(s) pagarán más desde su próxima renovación · <b>+' + pesos(r.aumentoMensual) + ' al mes</b>. Los recordatorios les explican el aumento.' : 'Ningún cliente actual paga menos que ' + pesos(Number(v)) + ': no cambia lo que cobras hoy.';
+  }).catch(function () {});
+}
+function valorAplicar(ip, b) {
+  var p = CACHE.invPlats[ip], v = $("vpV_" + ip).value.replace(/\D/g, "");
+  if (!v) return $("vpE_" + ip).textContent = "Escribe el nuevo valor.";
+  if (!confirm("¿Cambiar el valor del perfil de " + p.plataforma + " a " + pesos(Number(v)) + "? Todas las renovaciones se cobrarán a este valor.")) return;
+  $("vpE_" + ip).textContent = ""; b.disabled = true; b.textContent = "Aplicando…";
+  api("adm_valor_perfil", { base: p.base, tipo: p.tipo, valor: v, aplicar: true, tienda: $("vpT_" + ip).checked }).then(function (r) {
+    b.textContent = "✓ Aplicado"; toast("Valor actualizado ✓");
+    $("vpR_" + ip).innerHTML = '<div style="margin-top:8px"><span class="pill ok">' + r.cambiados + ' perfiles a ' + pesos(Number(v)) + '</span>' + (r.tienda ? ' <span class="pill ok">tienda actualizada</span>' : '') + '</div>' +
+      (r.mensajes && r.mensajes.length ? '<details class="card" style="margin-top:10px"><summary style="cursor:pointer">📲 Avisar a los ' + r.mensajes.length + ' cliente(s) que pagarán más (opcional)</summary>' + r.mensajes.map(function (m) { return msgBox(m, m.nombre); }).join("") + '</details>' : '');
+  }).catch(function (e) { b.disabled = false; b.textContent = "Aplicar"; $("vpE_" + ip).textContent = e.message; });
+}
 
 // ---------- Cuentas madre ----------
 VISTAS.cuentas = function () {
