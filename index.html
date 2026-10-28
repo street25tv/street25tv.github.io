@@ -132,6 +132,13 @@
 .off{position:absolute;top:14px;right:14px;background:linear-gradient(90deg,var(--acc),var(--acc2));color:#fff;font-weight:800;font-size:12px;padding:4px 9px;border-radius:999px}
 .card .ctop{padding-right:52px}
 .save{font-size:12px;color:var(--ok);font-weight:600}
+.flash{display:block;line-height:1.7;font-size:12px;font-weight:700;color:#fff;background:linear-gradient(90deg,#f59e0b,#ff3d6e);padding:6px 10px;border-radius:10px}
+.flash .cd{font-weight:600;background:rgba(0,0,0,.22);padding:1px 7px;border-radius:999px;font-variant-numeric:tabular-nums}
+.card.promo{border-color:rgba(245,158,11,.6);box-shadow:0 0 0 1px rgba(245,158,11,.25)}
+.promoban{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px;padding:12px 14px;border-radius:14px;background:linear-gradient(90deg,rgba(245,158,11,.18),rgba(255,61,110,.18));border:1px solid rgba(245,158,11,.5);font-size:14px}
+.promoban .cd{font-weight:700;font-variant-numeric:tabular-nums}
+.pcode{display:flex;gap:8px;margin-top:12px}.pcode input{flex:1;text-transform:uppercase}
+.pcmsg{font-size:12.5px;margin-top:6px}.pcmsg.ok{color:var(--ok)}.pcmsg.bad{color:var(--acc)}
 .comps{list-style:none;font-size:12.5px;border-top:1px solid var(--line);padding-top:8px}
 .comps li{display:flex;justify-content:space-between;gap:8px;padding:3px 0;color:var(--mut)}
 .comps li b{color:var(--txt);font-weight:600}
@@ -335,6 +342,7 @@
   <div class="aviso" id="aviso"></div>
 
   <h2 id="catalogo">Catálogo</h2>
+  <div id="promoBan"></div>
   <div class="tools">
   <input type="search" id="q" placeholder="🔎 Buscar…" autocomplete="off" oninput="BUSCA=this.value;pintarCatalogo()">
   <select id="orden" onchange="ORDEN=this.value;pintarCatalogo()" aria-label="Ordenar">
@@ -365,6 +373,10 @@
     <div class="shead"><h3 id="shTitulo">Tu pedido</h3><button class="x" onclick="cerrar('mCarrito')">✕</button></div>
     <div id="lineas"></div>
     <div class="tot"><span>Total (<span id="dias">30</span> días)</span><span id="total">$0</span></div>
+    <div id="pcodeBox">
+      <div class="pcode"><input type="text" id="pcode" placeholder="¿Tienes un código de promo?" maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')aplicarCodigo()"><button class="ghost" id="pcodeBtn" onclick="aplicarCodigo()">Aplicar</button></div>
+      <div class="pcmsg" id="pcmsg"></div>
+    </div>
 
     <div class="sec" id="secDatos">
       <h4>Tus datos</h4>
@@ -423,6 +435,7 @@ var TERMINOS = [
 
 var CAT = null, carrito = {}, comprobante = null, sondeo = null;
 var modo = "compra", REN = null, renSel = {};
+var CODIGO = null, CODIGO_TXT = "";
 
 // ---- Referidos ----
 function refActual() { var r = leerLocal("st25_ref", null); return r && r.c && r.exp > Date.now() ? r.c : ""; }
@@ -619,10 +632,19 @@ function guardarLocal(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); 
 function leerLocal(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
 
 function usarCatalogo(r) {
+  // Las promos que ya terminaron se quitan aquí mismo (el catálogo puede venir guardado unos minutos)
+  var ahora = Date.now();
+  (r.items || []).forEach(function (it) {
+    if (it.promo && it.promo.fin && it.promo.fin <= ahora) {
+      it.precio = it.normal || it.precio; it.descuento = it.full > it.precio ? Math.round((it.full - it.precio) * 100 / it.full) : 0;
+      delete it.promo; delete it.normal;
+    }
+  });
+  if (r.promoCarrito && r.promoCarrito.fin && r.promoCarrito.fin <= ahora) delete r.promoCarrito;
   CAT = r;
   document.getElementById("dias").textContent = r.dias || 30;
   if (r.whatsapp) document.getElementById("footWa").innerHTML = '<a href="https://wa.me/' + esc(r.whatsapp) + '" target="_blank" rel="noopener">WhatsApp ' + esc(r.whatsapp.replace(/^57/, "")) + "</a>";
-  pintarCatalogo(); pintarPagos(); pintarPedirCodigo(); pintarAviso();
+  pintarCatalogo(); pintarPagos(); pintarPedirCodigo(); pintarAviso(); pintarPromoBan();
   if (!TOP) cargarTop();
 }
 // Muestra al instante el último catálogo guardado en el teléfono y luego lo actualiza;
@@ -763,18 +785,66 @@ function pintarTop() {
     '<small>Datos e imágenes: <a href="https://www.themoviedb.org" target="_blank" rel="noopener">TMDB</a>. Street25 no está asociado a TMDB.</small></div>';
 }
 
+// ---------- Promociones flash ----------
+function falta(ms) {
+  var s = Math.floor((ms - Date.now()) / 1000);
+  if (s <= 0) return "terminó";
+  var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60, z = function (n) { return ("0" + n).slice(-2); };
+  return d ? "termina en " + d + "d " + h + "h" : "termina en " + z(h) + ":" + z(m) + ":" + z(x);
+}
+// Precio por unidad con promos (el servidor confirma al enviar el pedido)
+function precioItem(it) {
+  var base = it.normal || it.precio, best = it.promo && it.precio < base ? { u: it.precio, p: it.promo } : null;
+  if (CODIGO && CODIGO.tipo === "producto" && CODIGO.producto === it.id && CODIGO.precio < (best ? best.u : base)) best = { u: CODIGO.precio, p: CODIGO };
+  if (best) return best;
+  var car = null;
+  [CAT && CAT.promoCarrito, CODIGO].forEach(function (p) { if (p && p.tipo === "carrito" && (!car || p.pct > car.pct)) car = p; });
+  if (car) { var u = Math.round(base * (100 - car.pct) / 100 / 100) * 100; if (u < base) return { u: u, p: car }; }
+  return { u: base, p: null };
+}
+function pintarPromoBan() {
+  var p = CAT && CAT.promoCarrito, b = document.getElementById("promoBan");
+  b.innerHTML = p ? '<div class="promoban">⚡ <b>' + esc(p.nombre) + '</b><span>' + p.pct + '% de descuento en toda tu compra</span>' +
+    (p.fin ? '<span class="cd" data-fin="' + p.fin + '">' + falta(p.fin) + '</span>' : "") + (p.quedan !== null && p.quedan !== undefined ? '<span>· quedan ' + p.quedan + ' cupos</span>' : "") + '</div>' : "";
+}
+function aplicarCodigo() {
+  var txt = document.getElementById("pcode").value.toUpperCase().replace(/[^A-Z0-9]/g, ""), msg = document.getElementById("pcmsg"), b = document.getElementById("pcodeBtn");
+  if (!txt) { CODIGO = null; CODIGO_TXT = ""; msg.textContent = ""; pintarCarrito(); return; }
+  b.disabled = true; msg.className = "pcmsg"; msg.textContent = "Revisando…";
+  api("promo", { codigo: txt }).then(function (r) {
+    if (!r || r.error || !r.promo) throw new Error((r && r.error) || "No pudimos revisar el código.");
+    CODIGO = r.promo; CODIGO_TXT = txt;
+    var aplica = CODIGO.tipo === "carrito" || Object.keys(carrito).some(function (id) { return id === CODIGO.producto; });
+    var que = CODIGO.tipo === "carrito" ? CODIGO.pct + "% de descuento" : "precio especial" + (item(CODIGO.producto) ? " en " + item(CODIGO.producto).plataforma : "");
+    msg.className = "pcmsg ok"; msg.textContent = "✓ " + CODIGO.nombre + ": " + que + (aplica ? "" : " (agrega ese producto a tu carrito)") + (CODIGO.fin ? " · " + falta(CODIGO.fin) : "");
+  }).catch(function (e) {
+    CODIGO = null; CODIGO_TXT = ""; msg.className = "pcmsg bad"; msg.textContent = e.message;
+  }).then(function () { b.disabled = false; pintarCarrito(); });
+}
+// Cuenta regresiva: cuando una promo termina se recarga el catálogo
+setInterval(function () {
+  var fin = false;
+  [].forEach.call(document.querySelectorAll("[data-fin]"), function (e) {
+    var ms = Number(e.getAttribute("data-fin")); e.textContent = falta(ms); if (ms <= Date.now()) fin = true;
+  });
+  if (CODIGO && CODIGO.fin && CODIGO.fin <= Date.now()) { CODIGO = null; CODIGO_TXT = ""; fin = true; }
+  if (fin && CAT && !falta.recargando) { falta.recargando = true; usarCatalogo(CAT); pintarCarrito(); setTimeout(function () { falta.recargando = false; cargar(); }, 3000); }
+}, 1000);
 function tarjeta(it) {
   var cant = carrito[it.id] || 0, libres = it.disponibles - cant;
   var st = it.disponibles <= 0 ? '<span class="stock no">Agotado</span>' :
     (it.disponibles <= 2 ? '<span class="stock low">¡Últimos ' + it.disponibles + '!</span>' : '<span class="stock ok">● Disponible</span>');
   var full = Math.max(it.full || 0, it.precio), ahorro = full - it.precio;
   var comps = it.combo ? '<ul class="comps">' + it.componentes.map(function (k) {
+    var kp = it.promo && k.promo ? k.promo : k.precio;
     return '<li><span>' + esc(k.plataforma) + (k.tipo && !/normal/i.test(k.tipo) ? " " + esc(k.tipo) : "") + '</span><span>' +
-      (k.full > k.precio ? '<s class="old">' + pesos(k.full) + '</s>' : "") + '<b>' + pesos(k.precio) + '</b></span></li>';
+      (k.full > kp ? '<s class="old">' + pesos(k.full) + '</s>' : "") + '<b>' + pesos(kp) + '</b></span></li>';
   }).join("") + '</ul>' : "";
-  return '<div class="card' + (it.disponibles <= 0 ? " soldout" : "") + (it.combo ? " combo" : "") + '" style="--c:' + color(it.plataforma) + '">' +
+  var fl = it.promo ? '<div class="flash">⚡ ' + esc(it.promo.nombre) + (it.promo.fin ? ' <span class="cd" data-fin="' + it.promo.fin + '">' + falta(it.promo.fin) + '</span>' : "") +
+    (it.promo.quedan !== null && it.promo.quedan !== undefined ? ' <span>· ¡quedan ' + it.promo.quedan + '!</span>' : "") + '</div>' : "";
+  return '<div class="card' + (it.disponibles <= 0 ? " soldout" : "") + (it.combo ? " combo" : "") + (it.promo ? " promo" : "") + '" style="--c:' + color(it.plataforma) + '">' +
     (it.descuento > 0 ? '<span class="off">-' + it.descuento + '%</span>' : "") +
-    mediaHtml(it) + '<div class="ctop">' +
+    mediaHtml(it) + fl + '<div class="ctop">' +
     '<div><div class="cname">' + esc(it.plataforma) + '</div><div class="ctipo">' + esc(it.tipo || "Perfil") + '</div></div></div>' +
     '<div class="cdesc">' + esc(it.descripcion) + '</div>' + comps +
     '<div class="cprice">' + pesos(it.precio) + (ahorro > 0 ? '<s class="old">' + pesos(full) + '</s>' : "") + ' <small>/ ' + (CAT.dias || 30) + ' días</small></div>' +
@@ -847,7 +917,7 @@ function resumen() {
   Object.keys(carrito).forEach(function (id) {
     var it = item(id); if (!it) return;
     n += carrito[id] * (it.combo ? it.componentes.length : 1);
-    t += carrito[id] * it.precio;
+    t += carrito[id] * precioItem(it).u;
     f += carrito[id] * Math.max(it.full || 0, it.precio);
   });
   return { n: n, t: t, f: f };
@@ -863,6 +933,7 @@ function pintarCarrito() {
   var esRen = modo === "renovacion";
   document.getElementById("shTitulo").textContent = esRen ? "Renovar perfiles" : "Tu pedido";
   document.getElementById("secDatos").style.display = esRen ? "none" : "";
+  document.getElementById("pcodeBox").style.display = esRen ? "none" : "";
   if (esRen) {
     var rt = renTotal();
     document.getElementById("total").textContent = pesos(rt.t);
@@ -877,10 +948,10 @@ function pintarCarrito() {
   document.getElementById("total").textContent = pesos(r.t);
   document.getElementById("total2").textContent = pesos(r.t);
   document.getElementById("lineas").innerHTML = Object.keys(carrito).map(function (id) {
-    var it = item(id), full = Math.max(it.full || 0, it.precio);
-    return '<div class="line"><span>' + carrito[id] + ' × ' + esc(it.plataforma) + ' <small style="color:var(--mut)">' + esc(it.tipo) + '</small>' +
-      (it.combo ? '<small class="cl">' + it.componentes.map(function (k) { return esc(k.plataforma) + " " + pesos(k.precio); }).join(" · ") + '</small>' : "") + '</span>' +
-      '<span class="r">' + (full > it.precio ? '<s class="old">' + pesos(carrito[id] * full) + '</s>' : "") + pesos(carrito[id] * it.precio) +
+    var it = item(id), pi = precioItem(it), full = Math.max(it.full || 0, it.normal || it.precio);
+    return '<div class="line"><span>' + carrito[id] + ' × ' + esc(it.plataforma) + ' <small style="color:var(--mut)">' + esc(it.tipo) + '</small>' + (pi.p ? '<small class="cl" style="color:#f59e0b">⚡ ' + esc(pi.p.nombre) + '</small>' : "") +
+      (it.combo ? '<small class="cl">' + it.componentes.map(function (k) { return esc(k.plataforma) + " " + pesos(pi.p && it.promo && pi.p.id === it.promo.id && k.promo ? k.promo : k.precio); }).join(" · ") + '</small>' : "") + '</span>' +
+      '<span class="r">' + (full > pi.u ? '<s class="old">' + pesos(carrito[id] * full) + '</s>' : "") + pesos(carrito[id] * pi.u) +
       '<button class="del" onclick="cambiar(\'' + id + '\',-' + carrito[id] + ');if(!resumen().n)cerrar(\'mCarrito\')">quitar</button></span></div>';
   }).join("") + lineaAhorro(r.f, r.t);
 }
@@ -941,13 +1012,13 @@ function enviar() {
   var b = document.getElementById("btnEnviar"); b.disabled = true; b.textContent = "Enviando…";
   guardarLocal("st25_cliente", { nombre: nombre, wa: wa });
   var items = Object.keys(carrito).map(function (id) { return { id: id, cant: carrito[id] }; });
-  api("pedido", { nombre: nombre, contacto: wa, clave: clave, items: items, comprobante: comprobante, ref: refActual() }).then(function (r) {
+  api("pedido", { nombre: nombre, contacto: wa, clave: clave, items: items, comprobante: comprobante, ref: refActual(), codigo: CODIGO ? CODIGO_TXT : "" }).then(function (r) {
     if (!r || r.error) throw new Error((r && r.error) || "No se pudo enviar");
     guardarLocal("st25_ref", null);
     var mis = leerLocal("st25_pedidos", []);
     mis.unshift({ id: r.id, token: r.token, total: r.total, fecha: Date.now() });
     guardarLocal("st25_pedidos", mis.slice(0, 20));
-    carrito = {}; comprobante = null;
+    carrito = {}; comprobante = null; CODIGO = null; CODIGO_TXT = ""; document.getElementById("pcode").value = ""; document.getElementById("pcmsg").textContent = "";
     document.getElementById("drop").classList.remove("has");
     document.getElementById("drop").innerHTML = "📎 Toca para subir la captura del pago<br><small>Imagen o PDF</small>";
     document.getElementById("file").value = "";
