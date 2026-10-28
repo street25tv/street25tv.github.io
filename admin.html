@@ -167,7 +167,7 @@ textarea.in:focus{border-color:var(--acc2)}
 var API_URL = "https://script.google.com/macros/s/AKfycbzRPSLHYnZpNmhsGFux72vykDAjs8ORUZd1qDKn4gxAU16Xh4SqdxLItfl1jHOeC6hW/exec";
 var TOKEN = "", PIN = "", VISTA = "resumen", CACHE = {};
 var TABS = [
-  ["resumen", "📊 Resumen"], ["finanzas", "💰 Finanzas"], ["pedidos", "🧾 Pedidos"], ["clientes", "👥 Clientes"], ["vender", "➕ Vender"], ["promos", "🎁 Combos y promos", "🎁 Promos"],
+  ["resumen", "📊 Resumen"], ["finanzas", "💰 Finanzas"], ["pedidos", "🧾 Pedidos"], ["clientes", "👥 Clientes"], ["vender", "➕ Vender"], ["promos", "🎁 Combos y promos", "🎁 Promos"], ["revendedores", "🤝 Revendedores", "🤝 Socios"],
   ["vencimientos", "⏰ Vencimientos", "⏰ Vencen"], ["mensajes", "💬 Mensajes"], ["inventario", "📦 Inventario"], ["cuentas", "🏦 Cuentas madre", "🏦 Cuentas"], ["garantias", "🛡 Garantías"], ["ajustes", "⚙️ Ajustes"]
 ];
 
@@ -1520,6 +1520,106 @@ function pfEliminar(i, b) {
   if (!confirm("¿Eliminar la promo «" + p.nombre + "»?\nSi solo quieres pausarla, usa el interruptor.")) return;
   b.disabled = true;
   api("adm_promo_eliminar", { id: p.id }).then(function (r) { CACHE.pf = r; pfPintar(); toast("Promo eliminada"); }).catch(function (e) { b.disabled = false; toast(e.message); });
+}
+
+// ---------- Revendedores ----------
+VISTAS.revendedores = function () {
+  cargando("Cargando revendedores…");
+  api("adm_rev_lista").then(function (r) { CACHE.rv = r; rvPintar(); }).catch(fallo);
+};
+function rvPintar(extra) {
+  var r = CACHE.rv, t = r.totales;
+  var h = '<div class="row"><h2 style="margin:0">Revendedores (' + r.revendedores.length + ')</h2><span class="sp"></span><button class="btn sm" onclick="rvForm()">+ Nuevo revendedor</button></div>' +
+    '<div class="mut" style="margin:4px 0 10px">Portal: <a href="' + esc(r.portal) + '" target="_blank" rel="noopener">' + esc(r.portal.replace(/^https?:\/\//, "")) + '</a> · cuota ' + pesos(r.cuota) + '/mes del saldo · saldo no reembolsable</div>' +
+    '<div class="fgrid">' + finKpi("Saldo en custodia", pesos(t.custodia), null, "lo que les debes en perfiles") + finKpi("Recargas del mes", pesos(t.recargasMes)) +
+    finKpi("Ventas del mes", pesos(t.ventasMes)) + finKpi("Cuotas del mes", pesos(t.cuotasMes)) + '</div>' +
+    '<div id="rvMsg">' + (extra || "") + '</div><div id="rvForm"></div>';
+  if (r.pendientes.length) h += '<h2 style="margin-top:16px">Recargas por aprobar (' + r.pendientes.length + ')</h2>' + r.pendientes.map(function (x) {
+    return '<div class="card" id="rc_' + esc(x.id) + '"><div class="row"><b>' + esc(x.nombre) + '</b><span class="mut">' + esc(x.codigo) + ' · ' + esc(x.fecha) + '</span><span class="sp"></span><b>' + pesos(x.monto) + '</b></div>' +
+      (x.revision ? '<div class="mut" style="margin-top:6px;white-space:pre-wrap">' + esc(x.revision) + '</div>' : '') +
+      '<div class="mut" style="margin-top:4px">El comprobante te llegó por Telegram.</div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn ok sm" onclick="rvRecarga(\'' + esc(x.id) + '\',true,this)">✅ Pago recibido — cargar</button><button class="btn bad sm" onclick="rvRecarga(\'' + esc(x.id) + '\',false,this)">❌ Rechazar</button></div><div class="res"></div></div>';
+  }).join("");
+  h += '<h2 style="margin-top:16px">Revendedores</h2>' + (r.revendedores.length ? r.revendedores.map(function (v, i) {
+    return '<div class="card' + (v.estado === "Activo" ? "" : " apagado") + '"><div class="row"><b>' + esc(v.nombre) + '</b><span class="mut">' + esc(v.codigo) + ' · ' + esc(v.tel) + '</span><span class="sp"></span>' +
+      '<span class="pill ' + (v.estado === "Activo" ? "ok" : "") + '">' + esc(v.estado) + '</span></div>' +
+      '<div class="ptx"><span>Saldo <b>' + pesos(v.saldo) + '</b></span><span>Descuento <b>' + v.pct + '%</b></span>' +
+      '<span>' + (v.cuotaAlDia ? 'Cuota al día hasta ' + esc(v.cuotaHasta) : '<span class="vend">Cuota pendiente</span>') + '</span>' +
+      '<span>Este mes <b>' + pesos(v.ventasMes) + '</b> (' + v.nMes + ')</span>' + (v.ultima ? '<span>Última compra ' + esc(v.ultima) + '</span>' : '') + '</div>' +
+      (v.notas ? '<div class="mut" style="margin-top:4px">' + esc(v.notas) + '</div>' : '') +
+      '<div class="row" style="margin-top:10px"><button class="btn sec sm" onclick="rvForm(' + i + ')">✏️ Editar</button><button class="btn sec sm" onclick="rvAjusteForm(' + i + ')">± Saldo</button>' +
+      '<button class="btn sec sm" onclick="rvMovs(' + i + ')">📄 Movimientos</button><button class="btn sec sm" onclick="rvPin(' + i + ',this)">🔑 Nuevo PIN</button></div><div id="rv_' + i + '"></div></div>';
+  }).join("") : '<div class="empty">Aún no tienes revendedores. Crea el primero.</div>');
+  $("vista").innerHTML = h;
+}
+function rvForm(i) {
+  var v = i === undefined ? null : CACHE.rv.revendedores[i];
+  $("rvForm").innerHTML = '<div class="card acc-form"><b>' + (v ? "Editar revendedor" : "Nuevo revendedor") + '</b>' +
+    '<div class="f2"><div><label class="f">Nombre</label><input class="in" id="rvNom" maxlength="50" value="' + esc(v ? v.nombre : "") + '"></div>' +
+    '<div><label class="f">WhatsApp</label><input class="in" id="rvTel" inputmode="numeric" maxlength="13" value="' + esc(v ? v.tel : "") + '"></div></div>' +
+    '<div class="f2"><div><label class="f">% de descuento sobre la tienda</label><input class="in" id="rvPct" inputmode="numeric" maxlength="2" value="' + (v ? v.pct : CACHE.rv.pctDef) + '" oninput="rvEj()"></div>' +
+    '<div><label class="f">Estado</label><select class="in" id="rvEst"><option' + (!v || v.estado === "Activo" ? " selected" : "") + '>Activo</option><option' + (v && v.estado !== "Activo" ? " selected" : "") + '>Pausado</option></select></div></div>' +
+    '<div class="calc" id="rvEj"></div>' +
+    '<label class="f">Notas (opcional)</label><input class="in" id="rvNot" maxlength="200" value="' + esc(v ? v.notas : "") + '">' +
+    (v ? '' : '<div class="mut" style="margin-top:8px">Se crea con un PIN de 4 números y te doy el mensaje de bienvenida para enviárselo por WhatsApp.</div>') +
+    '<div class="err" id="rvErr"></div><div class="row" style="margin-top:12px"><button class="btn" id="rvBtn" onclick="rvGuardar(' + (v ? "'" + esc(v.codigo) + "'" : "''") + ')">' + (v ? "Guardar cambios" : "Crear revendedor") + '</button>' +
+    '<button class="btn sec" onclick="$(\'rvForm\').innerHTML=\'\'">Cancelar</button></div></div>';
+  rvEj();
+  $("rvForm").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function rvEj() { var p = Number($("rvPct").value.replace(/\D/g, "")) || 0; $("rvEj").innerHTML = 'Ej.: un perfil de ' + pesos(15000) + ' en la tienda le queda en <b>' + pesos(Math.round(15000 * (100 - p) / 100 / 100) * 100) + '</b>. Revisa que siga por encima de tu costo.'; }
+function rvGuardar(codigo) {
+  var d = { codigo: codigo, nombre: $("rvNom").value.trim(), tel: $("rvTel").value, pct: $("rvPct").value.replace(/\D/g, ""), estado: $("rvEst").value, notas: $("rvNot").value };
+  if (d.nombre.length < 3) return $("rvErr").textContent = "Escribe el nombre.";
+  if (d.pct === "") return $("rvErr").textContent = "Escribe el % de descuento.";
+  var b = $("rvBtn"); b.disabled = true; b.textContent = "Guardando…";
+  api("adm_rev_guardar", d).then(function (r) {
+    CACHE.rv = r.lista;
+    rvPintar(r.mensaje ? '<div class="card" style="border-color:var(--ok)"><b>✅ Revendedor ' + esc(r.codigo) + ' creado · PIN ' + esc(r.pin) + '</b>' + msgBox(r.mensaje, "Mensaje de bienvenida") + '</div>' : '');
+    toast("Guardado ✓");
+  }).catch(function (e) { b.disabled = false; b.textContent = "Guardar"; $("rvErr").textContent = e.message; });
+}
+function rvPin(i, b) {
+  var v = CACHE.rv.revendedores[i];
+  if (!confirm("¿Crear un PIN nuevo para " + v.nombre + "? El anterior deja de funcionar.")) return;
+  b.disabled = true;
+  api("adm_rev_pin", { codigo: v.codigo }).then(function (r) { $("rv_" + i).innerHTML = '<div class="mut" style="margin-top:8px">PIN nuevo: <b>' + esc(r.pin) + '</b></div>' + msgBox(r.mensaje, "Mensaje con el PIN"); })
+    .catch(function (e) { toast(e.message); }).then(function () { b.disabled = false; });
+}
+function rvAjusteForm(i) {
+  var v = CACHE.rv.revendedores[i];
+  $("rv_" + i).innerHTML = '<div class="card acc-form" style="margin-top:10px"><b>Mover saldo de ' + esc(v.nombre) + '</b> <span class="mut">(saldo ' + pesos(v.saldo) + ')</span>' +
+    '<div class="f2"><div><label class="f">Tipo</label><select class="in" id="ajT' + i + '"><option value="Recarga">Recarga manual (pago recibido)</option><option value="Garantía">Garantía (devolver días no usados)</option><option value="Ajuste">Ajuste / corrección</option></select></div>' +
+    '<div><label class="f">Valor (negativo para descontar)</label><input class="in" id="ajM' + i + '" inputmode="numeric" placeholder="Ej.: 20000 o -5000"></div></div>' +
+    '<label class="f">Motivo</label><input class="in" id="ajR' + i + '" maxlength="160" placeholder="Queda en sus movimientos">' +
+    '<div class="err" id="ajE' + i + '"></div><div class="row" style="margin-top:10px"><button class="btn sm" id="ajB' + i + '" onclick="rvAjuste(' + i + ')">Aplicar</button><button class="btn sec sm" onclick="$(\'rv_' + i + '\').innerHTML=\'\'">Cancelar</button></div></div>';
+}
+function rvAjuste(i) {
+  var v = CACHE.rv.revendedores[i], m = $("ajM" + i).value.replace(/[^\d-]/g, ""), mot = $("ajR" + i).value.trim();
+  if (!Number(m)) return $("ajE" + i).textContent = "Escribe el valor.";
+  if (mot.length < 3) return $("ajE" + i).textContent = "Escribe el motivo.";
+  if (!confirm((Number(m) > 0 ? "Sumar " : "Descontar ") + pesos(Math.abs(Number(m))) + " al saldo de " + v.nombre + "?")) return;
+  var b = $("ajB" + i); b.disabled = true;
+  api("adm_rev_ajuste", { codigo: v.codigo, monto: m, motivo: mot, tipo: $("ajT" + i).value }).then(function (r) { CACHE.rv = r.lista; rvPintar(); toast("Saldo actualizado: " + pesos(r.saldo)); })
+    .catch(function (e) { b.disabled = false; $("ajE" + i).textContent = e.message; });
+}
+function rvRecarga(id, aprobar, b) {
+  if (!aprobar && !confirm("¿Rechazar esta recarga?")) return;
+  var caja = $("rc_" + id); caja.querySelectorAll("button").forEach(function (x) { x.disabled = true; });
+  api("adm_rev_recarga", { id: id, aprobar: aprobar }).then(function (r) {
+    CACHE.rv = r.lista; rvPintar(msgBox(r.mensaje, r.estado === "Aprobada" ? "✅ Recarga cargada · mensaje para el revendedor" : "Mensaje para el revendedor")); toast(r.estado === "Aprobada" ? "Saldo cargado ✓" : "Recarga rechazada");
+  }).catch(function (e) { caja.querySelectorAll("button").forEach(function (x) { x.disabled = false; }); caja.querySelector(".res").innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+}
+function rvMovs(i) {
+  var v = CACHE.rv.revendedores[i], box = $("rv_" + i);
+  box.innerHTML = '<div class="load">Cargando…</div>';
+  api("adm_rev_movs", { codigo: v.codigo }).then(function (r) {
+    box.innerHTML = '<div style="overflow-x:auto;margin-top:10px"><table class="tp"><tr><th>Fecha</th><th>Movimiento</th><th>Valor</th><th>Saldo</th></tr>' +
+      (r.movimientos.length ? r.movimientos.map(function (m) { return '<tr><td class="mut">' + esc(m.fecha) + '</td><td><b>' + esc(m.tipo) + '</b><div class="mut">' + esc(m.detalle) + '</div></td><td class="' + (m.monto < 0 ? "neg" : "") + '">' + pesosS(m.monto) + '</td><td>' + pesos(m.saldo) + '</td></tr>'; }).join("") :
+        '<tr><td colspan="4" class="mut">Sin movimientos</td></tr>') + '</table></div>' +
+      (r.clientes.length ? '<div class="mut" style="margin-top:10px"><b>' + r.clientes.length + ' perfiles activos</b>: ' + r.clientes.map(function (c) { return esc(c.cliente) + ' (' + esc(c.plataforma) + ', ' + esc(c.vence) + ')'; }).join(" · ") + '</div>' : '') +
+      '<button class="btn sec sm" style="margin-top:8px" onclick="$(\'rv_' + i + '\').innerHTML=\'\'">Cerrar</button>';
+  }).catch(function (e) { box.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
 }
 
 VISTAS.ajustes = function () {
