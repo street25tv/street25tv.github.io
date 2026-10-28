@@ -131,6 +131,10 @@ textarea.in:focus{border-color:var(--acc2)}
 .chip{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12px}
 .lin{display:grid;grid-template-columns:1fr 70px 110px 34px;gap:6px;align-items:center;margin-bottom:6px}
 @media (max-width:520px){.lin{grid-template-columns:1fr 56px 86px 30px}td,th{font-size:13px}}
+.sw{position:relative;display:inline-block;width:44px;height:24px;flex:0 0 auto;cursor:pointer}.sw input{opacity:0;width:0;height:0;position:absolute}.sw i{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:background .2s}.sw i:before{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}.sw input:checked+i{background:var(--ok)}.sw input:checked+i:before{transform:translateX(20px)}.sw input:disabled+i{opacity:.5}
+.card.apagado{opacity:.6}.chip.neg{color:var(--acc);border-color:rgba(255,61,110,.45)}
+.plist{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:2px 10px 8px;background:var(--bg2)}
+.calc{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--bg2);border:1px solid var(--line);font-size:13.5px;line-height:1.6}.calc:empty{display:none}
 </style>
 </head>
 <body>
@@ -163,7 +167,7 @@ textarea.in:focus{border-color:var(--acc2)}
 var API_URL = "https://script.google.com/macros/s/AKfycbzRPSLHYnZpNmhsGFux72vykDAjs8ORUZd1qDKn4gxAU16Xh4SqdxLItfl1jHOeC6hW/exec";
 var TOKEN = "", PIN = "", VISTA = "resumen", CACHE = {};
 var TABS = [
-  ["resumen", "📊 Resumen"], ["finanzas", "💰 Finanzas"], ["pedidos", "🧾 Pedidos"], ["clientes", "👥 Clientes"], ["vender", "➕ Vender"],
+  ["resumen", "📊 Resumen"], ["finanzas", "💰 Finanzas"], ["pedidos", "🧾 Pedidos"], ["clientes", "👥 Clientes"], ["vender", "➕ Vender"], ["promos", "🎁 Combos y promos", "🎁 Promos"],
   ["vencimientos", "⏰ Vencimientos", "⏰ Vencen"], ["mensajes", "💬 Mensajes"], ["inventario", "📦 Inventario"], ["cuentas", "🏦 Cuentas madre", "🏦 Cuentas"], ["garantias", "🛡 Garantías"], ["ajustes", "⚙️ Ajustes"]
 ];
 
@@ -1311,6 +1315,212 @@ VISTAS.garantias = function () {
     $("vista").innerHTML = h;
   }).catch(fallo);
 };
+
+// ---------- Combos y promociones flash ----------
+VISTAS.promos = function (sub) {
+  CACHE.promSub = sub || CACHE.promSub || "combos";
+  var s = CACHE.promSub;
+  $("vista").innerHTML = '<div class="row" style="margin-bottom:12px"><button class="chipf' + (s === "combos" ? " on" : "") + '" onclick="VISTAS.promos(\'combos\')">🎁 Combos</button>' +
+    '<button class="chipf' + (s === "flash" ? " on" : "") + '" onclick="VISTAS.promos(\'flash\')">⚡ Promos flash</button></div><div id="promBox"><div class="load">Cargando…</div></div>';
+  if (s === "combos") cbCargar(); else pfCargar();
+};
+function swHtml(on, accion) { return '<label class="sw" title="' + (on ? "Activo: toca para desactivar" : "Inactivo: toca para activar") + '"><input type="checkbox"' + (on ? " checked" : "") + ' onchange="' + accion + '"><i></i></label>'; }
+function margenHtml(precio, costo) {
+  if (costo === null || costo === undefined || !costo) return '<span class="mut">costo sin dato</span>';
+  var m = precio - costo, pc = precio ? Math.round(m * 100 / precio) : 0;
+  return m < 0 ? '<span class="neg">pierdes ' + pesos(-m) + '</span>' : '<span class="' + (pc < 15 ? "vend" : "") + '">te deja ' + pesos(m) + ' (' + pc + '%)</span>';
+}
+
+// ----- Combos -----
+function cbCargar() {
+  api("adm_combos").then(function (r) { CACHE.cb = r; cbPintar(); }).catch(function (e) { $("promBox").innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+}
+function cbPintar() {
+  var r = CACHE.cb, act = r.combos.filter(function (c) { return c.activo; }).length;
+  var h = '<div class="row"><h2 style="margin:0">Combos (' + act + ' activos de ' + r.combos.length + ')</h2><span class="sp"></span><button class="btn sm" onclick="cbForm()">+ Nuevo combo</button></div><div id="cbForm"></div>';
+  h += r.combos.length ? r.combos.map(function (c, i) {
+    return '<div class="card' + (c.activo ? "" : " apagado") + '"><div class="row"><b>' + esc(c.nombre) + '</b><span class="sp"></span>' + swHtml(c.activo, "cbEstado(" + i + ",this)") + '</div>' +
+      '<div class="chips">' + c.incluye.map(function (n) { return '<span class="chip">' + esc(n) + '</span>'; }).join("") +
+      c.faltan.map(function (n) { return '<span class="chip neg">⚠️ ' + esc(n) + ' no está en el Catálogo</span>'; }).join("") + '</div>' +
+      '<div class="ptx"><span>Precio <b>' + pesos(c.precio) + '</b></span>' + (c.suma ? '<span>Sueltos <s>' + pesos(c.suma) + '</s></span>' : '') +
+      (c.ahorro > 0 ? '<span>Cliente ahorra <b>' + pesos(c.ahorro) + ' (' + c.pctAhorro + '%)</b></span>' : (c.suma ? '<span class="vend">no hay ahorro vs. sueltos</span>' : '')) +
+      '<span>' + margenHtml(c.precio, c.costo) + '</span><span>' + (c.disponibles > 0 ? c.disponibles + ' disponibles' : '<span class="neg">sin stock</span>') + '</span></div>' +
+      (c.costo !== null && c.precio < c.costo ? '<div class="pisow">⚠️ Este combo está por debajo de lo que te cuestan sus perfiles (' + pesos(c.costo) + ').</div>' : '') +
+      '<div class="row" style="margin-top:10px"><button class="btn sec sm" onclick="cbForm(' + i + ')">✏️ Editar</button><button class="btn bad sm" onclick="cbEliminar(' + i + ',this)">🗑 Eliminar</button></div></div>';
+  }).join("") : '<div class="empty">Aún no tienes combos. Crea el primero.</div>';
+  $("promBox").innerHTML = h;
+}
+function cbForm(i) {
+  var r = CACHE.cb, c = i === undefined ? null : r.combos[i];
+  CACHE.cbEdit = c;
+  var sel = {}; if (c) c.incluye.forEach(function (n) { sel[n] = 1; });
+  $("cbForm").innerHTML = '<div class="card acc-form"><b>' + (c ? "Editar combo" : "Nuevo combo") + '</b>' +
+    '<label class="f">Nombre</label><input class="in" id="cbNom" maxlength="60" placeholder="Ej.: Netflix + Disney" value="' + esc(c ? c.nombre : "") + '">' +
+    '<label class="f">Plataformas (mínimo 2)</label><div class="plist">' + r.sueltos.map(function (s, j) {
+      return '<label class="gopt"><input type="checkbox" data-cb="' + j + '"' + (sel[s.nombre] ? " checked" : "") + ' onchange="cbCalc()"><span>' + esc(s.nombre) +
+        ' <span class="mut">· ' + pesos(s.precio) + ' · ' + s.disponibles + ' libres' + (s.activo ? '' : ' · oculto en la tienda') + '</span></span></label>';
+    }).join("") + '</div>' +
+    '<label class="f">Precio final del combo (30 días)</label><input class="in" id="cbPre" inputmode="numeric" placeholder="Ej.: 25000" value="' + (c ? c.precio : "") + '" oninput="cbCalc()">' +
+    '<div class="calc" id="cbCalc"></div>' +
+    '<label class="f">Descripción (opcional)</label><input class="in" id="cbDes" maxlength="160" placeholder="Ej.: 2 perfiles propios, uno por plataforma" value="' + esc(c ? c.descripcion : "") + '">' +
+    '<label class="gopt"><input type="checkbox" id="cbAct"' + (!c || c.activo ? " checked" : "") + '><span>Visible en la tienda</span></label>' +
+    '<div class="err" id="cbErr"></div><div class="row" style="margin-top:12px"><button class="btn" id="cbBtn" onclick="cbGuardar()">' + (c ? "Guardar cambios" : "Crear combo") + '</button>' +
+    '<button class="btn sec" onclick="$(\'cbForm\').innerHTML=\'\'">Cancelar</button></div></div>';
+  cbCalc();
+  $("cbForm").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function cbSel() { return [].filter.call(document.querySelectorAll("#cbForm input[data-cb]"), function (x) { return x.checked; }).map(function (x) { return CACHE.cb.sueltos[Number(x.getAttribute("data-cb"))]; }); }
+function cbCalc() {
+  var sel = cbSel(), precio = Number($("cbPre").value.replace(/\D/g, "")) || 0;
+  if (!sel.length) { $("cbCalc").innerHTML = '<span class="mut">Elige las plataformas del combo.</span>'; return; }
+  var suma = sel.reduce(function (s, x) { return s + x.precio; }, 0);
+  var conCosto = sel.every(function (x) { return x.costo; }), costo = conCosto ? sel.reduce(function (s, x) { return s + x.costo; }, 0) : null;
+  var stock = Math.min.apply(null, sel.map(function (x) { return x.disponibles; }));
+  var h = '<div>Sueltos suman <b>' + pesos(suma) + '</b>' + (costo !== null ? ' · te cuestan <b>' + pesos(costo) + '</b>' : '') + ' · ' + stock + ' combos posibles hoy</div>';
+  if (precio) {
+    h += '<div>' + (precio < suma ? '🎁 El cliente ahorra <b>' + pesos(suma - precio) + ' (' + Math.round((suma - precio) * 100 / suma) + '%)</b>' : '<span class="vend">El combo no es más barato que comprar por separado.</span>') +
+      ' · 💰 ' + margenHtml(precio, costo) + '</div>';
+    if (costo !== null && precio < costo) h += '<div class="pisow">⚠️ Por debajo del costo: cada combo te deja pérdida de ' + pesos(costo - precio) + '.</div>';
+  }
+  $("cbCalc").innerHTML = h;
+}
+function cbGuardar() {
+  var sel = cbSel(), nom = $("cbNom").value.trim(), precio = Number($("cbPre").value.replace(/\D/g, "")) || 0, err = function (t) { $("cbErr").textContent = t; };
+  if (nom.length < 3) return err("Escribe el nombre del combo.");
+  if (sel.length < 2) return err("Elige al menos 2 plataformas.");
+  if (precio < 1000) return err("Escribe el precio del combo.");
+  var costo = sel.every(function (x) { return x.costo; }) ? sel.reduce(function (s, x) { return s + x.costo; }, 0) : 0;
+  if (costo && precio < costo && !confirm("⚠️ Este combo queda por debajo del costo (" + pesos(costo) + ").\n¿Guardarlo de todas formas?")) return;
+  var b = $("cbBtn"); b.disabled = true; b.textContent = "Guardando…";
+  api("adm_combo_guardar", { original: CACHE.cbEdit ? CACHE.cbEdit.nombre : "", nombre: nom, incluye: sel.map(function (x) { return x.nombre; }), precio: precio, descripcion: $("cbDes").value, activo: $("cbAct").checked })
+    .then(function (r) { CACHE.cb = r; cbPintar(); toast("Combo guardado ✓"); })
+    .catch(function (e) { b.disabled = false; b.textContent = "Guardar"; err(e.message); });
+}
+function cbEstado(i, el) {
+  var c = CACHE.cb.combos[i]; el.disabled = true;
+  api("adm_combo_estado", { nombre: c.nombre, activo: el.checked }).then(function (r) { c.activo = r.activo; cbPintar(); toast(r.activo ? "Combo visible en la tienda" : "Combo oculto"); })
+    .catch(function (e) { el.checked = !el.checked; el.disabled = false; toast(e.message); });
+}
+function cbEliminar(i, b) {
+  var c = CACHE.cb.combos[i];
+  if (!confirm("¿Eliminar el combo «" + c.nombre + "»?\nSi solo quieres ocultarlo, usa el interruptor.")) return;
+  b.disabled = true;
+  api("adm_combo_eliminar", { nombre: c.nombre }).then(function (r) { CACHE.cb = r; cbPintar(); toast("Combo eliminado"); }).catch(function (e) { b.disabled = false; toast(e.message); });
+}
+
+// ----- Promociones flash -----
+function pfCargar() {
+  api("adm_promos").then(function (r) { CACHE.pf = r; pfPintar(); }).catch(function (e) { $("promBox").innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+}
+function pfFalta(ms) {
+  var s = Math.floor((ms - Date.now()) / 1000);
+  if (s <= 0) return "terminó";
+  var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  return d ? d + " d " + h + " h" : h ? h + " h " + m + " min" : m + " min";
+}
+function pfPintar() {
+  var r = CACHE.pf, act = r.promos.filter(function (p) { return p.estado === "Activa"; }).length;
+  var pill = { Activa: "ok", Programada: "warn", Pausada: "", Agotada: "bad", Terminada: "", Incompleta: "bad" };
+  var h = '<div class="row"><h2 style="margin:0">Promos flash (' + act + ' activas)</h2><span class="sp"></span><button class="btn sm" onclick="pfForm()">+ Nueva promo</button></div>' +
+    '<div class="mut" style="margin:4px 0 10px">Solo compras nuevas: el cliente paga la promo el primer mes y renueva al valor normal.</div><div id="pfForm"></div>';
+  h += r.promos.length ? r.promos.map(function (p, i) {
+    var que = p.tipo === "carrito" ? '<b>' + p.pct + '% de descuento</b> a toda la compra' :
+      (p.sinProducto ? '<span class="neg">⚠️ El producto ya no está en la tienda</span>' : esc(p.productoNombre) + ' a <b>' + pesos(p.precio) + '</b> <s class="mut">' + pesos(p.normal) + '</s>' +
+        (p.normal ? ' <span class="mut">(-' + Math.round((p.normal - p.precio) * 100 / p.normal) + '%)</span>' : ''));
+    var cuando = [];
+    if (p.inicioMs && p.estado === "Programada") cuando.push("empieza " + esc(p.inicioTxt));
+    if (p.finMs) cuando.push(p.estado === "Activa" ? "⏱ termina en " + pfFalta(p.finMs) + " (" + esc(p.finTxt) + ")" : "fin " + esc(p.finTxt));
+    var u = p.uso;
+    return '<div class="card' + (p.activo ? "" : " apagado") + '"><div class="row"><b>⚡ ' + esc(p.nombre) + '</b><span class="pill ' + (pill[p.estado] || "") + '">' + esc(p.estado) + '</span><span class="sp"></span>' + swHtml(p.activo, "pfEstado(" + i + ",this)") + '</div>' +
+      '<div style="margin-top:6px">' + que + '</div>' +
+      '<div class="chips">' + (p.codigo ? '<span class="chip">🔑 Código ' + esc(p.codigo) + '</span>' : '<span class="chip">Automática</span>') +
+      (p.cupos ? '<span class="chip">🎟 ' + (p.cupos - p.quedan) + ' de ' + p.cupos + ' cupos usados</span>' : '<span class="chip">Sin límite de cupos</span>') +
+      cuando.map(function (t) { return '<span class="chip">' + t + '</span>'; }).join("") + '</div>' +
+      (p.tipo === "producto" && !p.sinProducto && p.costo ? '<div class="ptx"><span>' + margenHtml(p.precio, p.costo) + ' por venta</span></div>' : '') +
+      (p.tipo === "producto" && p.costo && p.precio < p.costo ? '<div class="pisow">⚠️ El precio promo está por debajo del costo del perfil (' + pesos(p.costo) + ').</div>' : '') +
+      '<div class="ptx"><span>Vendió <b>' + u.pedidos + '</b> ' + (u.pedidos === 1 ? "pedido" : "pedidos") + (p.tipo === "producto" ? ' · <b>' + u.unidades + '</b> ' + (u.unidades === 1 ? "unidad" : "unidades") : '') + '</span>' +
+      '<span>Ingresos <b>' + pesos(u.ingresos) + '</b></span><span>Descuento dado ' + pesos(u.descuento) + '</span>' + (u.pendientes ? '<span class="vend">' + u.pendientes + ' pendiente' + (u.pendientes === 1 ? '' : 's') + ' de pago</span>' : '') + '</div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn sec sm" onclick="pfForm(' + i + ')">✏️ Editar</button><button class="btn bad sm" onclick="pfEliminar(' + i + ',this)">🗑 Eliminar</button></div></div>';
+  }).join("") : '<div class="empty">Aún no tienes promociones flash.</div>';
+  $("promBox").innerHTML = h;
+}
+function pfForm(i) {
+  var r = CACHE.pf, p = i === undefined ? null : r.promos[i];
+  CACHE.pfEdit = p;
+  var tipo = p ? p.tipo : "producto";
+  $("pfForm").innerHTML = '<div class="card acc-form"><b>' + (p ? "Editar promo" : "Nueva promo flash") + '</b>' +
+    '<label class="f">Nombre (lo ve el cliente)</label><input class="in" id="pfNom" maxlength="50" placeholder="Ej.: Flash Disney" value="' + esc(p ? p.nombre : "") + '">' +
+    '<label class="f">Tipo</label><select class="in" id="pfTipo" onchange="pfTipo()"><option value="producto"' + (tipo === "producto" ? " selected" : "") + '>Precio especial a una plataforma o combo</option>' +
+    '<option value="carrito"' + (tipo === "carrito" ? " selected" : "") + '>% de descuento a todo el carrito</option></select>' +
+    '<div id="pfProd"><label class="f">Plataforma o combo</label><select class="in" id="pfProducto" onchange="pfCalc()">' + r.productos.map(function (x) {
+      return '<option value="' + esc(x.id) + '"' + (p && p.producto === x.id ? " selected" : "") + '>' + esc(x.nombre) + ' · ' + pesos(x.precio) + ' · ' + x.disponibles + ' libres</option>';
+    }).join("") + '</select>' +
+    '<label class="f">Precio especial</label><input class="in" id="pfPre" inputmode="numeric" placeholder="Ej.: 9000" value="' + (p && p.precio ? p.precio : "") + '" oninput="pfCalc()"></div>' +
+    '<div id="pfCar"><label class="f">% de descuento</label><input class="in" id="pfPct" inputmode="numeric" maxlength="2" placeholder="Ej.: 10" value="' + (p && p.pct ? p.pct : "") + '" oninput="pfCalc()">' +
+    '<div class="mut" style="margin-top:6px">Se aplica a lo que no tenga otra promo. Cada cupo es un pedido.</div></div>' +
+    '<div class="calc" id="pfCalc"></div>' +
+    '<div class="f2"><div><label class="f">Empieza (opcional)</label><input class="in" type="datetime-local" id="pfIni" value="' + esc(p ? p.inicio : "") + '"></div>' +
+    '<div><label class="f">Termina (opcional)</label><input class="in" type="datetime-local" id="pfFin" value="' + esc(p ? p.fin : "") + '"></div></div>' +
+    '<div class="row" style="margin-top:6px"><span class="mut">Terminar:</span><button class="chipf" onclick="pfFinRapido(\'hoy\')">hoy 11:59 p. m.</button><button class="chipf" onclick="pfFinRapido(24)">en 24 h</button><button class="chipf" onclick="pfFinRapido(72)">en 3 días</button><button class="chipf" onclick="pfFinRapido(\'dom\')">el domingo</button><button class="chipf" onclick="$(\'pfFin\').value=\'\'">sin fin</button></div>' +
+    '<div class="f2"><div><label class="f">Cupos (opcional)</label><input class="in" id="pfCup" inputmode="numeric" placeholder="Ej.: 5 · vacío = sin límite" value="' + (p && p.cupos ? p.cupos : "") + '"></div>' +
+    '<div><label class="f">Código (opcional)</label><input class="in" id="pfCod" maxlength="20" placeholder="Ej.: FLASH10 · vacío = automática" value="' + esc(p ? p.codigo : "") + '" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,\'\')"></div></div>' +
+    '<div class="mut" style="margin-top:6px">Con código, la promo solo aplica si el cliente lo escribe en el carrito.</div>' +
+    '<label class="gopt"><input type="checkbox" id="pfAct"' + (!p || p.activo ? " checked" : "") + '><span>Activa</span></label>' +
+    '<div class="err" id="pfErr"></div><div class="row" style="margin-top:12px"><button class="btn" id="pfBtn" onclick="pfGuardar()">' + (p ? "Guardar cambios" : "Crear promo") + '</button>' +
+    '<button class="btn sec" onclick="$(\'pfForm\').innerHTML=\'\'">Cancelar</button></div></div>';
+  pfTipo();
+  $("pfForm").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function pfTipo() { var c = $("pfTipo").value === "carrito"; $("pfProd").classList.toggle("oculto", c); $("pfCar").classList.toggle("oculto", !c); pfCalc(); }
+function pfProdSel() { var id = $("pfProducto").value; return CACHE.pf.productos.filter(function (x) { return x.id === id; })[0]; }
+function pfCalc() {
+  if ($("pfTipo").value === "carrito") { var pc = Number($("pfPct").value.replace(/\D/g, "")) || 0; $("pfCalc").innerHTML = pc ? 'Ej.: un perfil de ' + pesos(15000) + ' queda en <b>' + pesos(Math.round(15000 * (100 - pc) / 100 / 100) * 100) + '</b>' : ''; return; }
+  var x = pfProdSel(), pre = Number($("pfPre").value.replace(/\D/g, "")) || 0;
+  if (!x) { $("pfCalc").innerHTML = ""; return; }
+  var h = '<div>Precio normal <b>' + pesos(x.precio) + '</b>' + (x.costo ? ' · te cuesta <b>' + pesos(x.costo) + '</b>' : '') + '</div>';
+  if (pre) {
+    h += '<div>' + (pre < x.precio ? '⚡ Descuento de <b>' + pesos(x.precio - pre) + ' (' + Math.round((x.precio - pre) * 100 / x.precio) + '%)</b>' : '<span class="neg">Debe ser menor que el precio normal.</span>') + ' · 💰 ' + margenHtml(pre, x.costo) + '</div>';
+    if (x.costo && pre < x.costo) h += '<div class="pisow">⚠️ Por debajo del costo: cada venta te deja pérdida de ' + pesos(x.costo - pre) + '.</div>';
+  }
+  $("pfCalc").innerHTML = h;
+}
+function pfFechaIn(d) { var z = function (n) { return ("0" + n).slice(-2); }; return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate()) + "T" + z(d.getHours()) + ":" + z(d.getMinutes()); }
+function pfFinRapido(v) {
+  var d = new Date();
+  if (v === "hoy") d.setHours(23, 59, 0, 0);
+  else if (v === "dom") { d.setDate(d.getDate() + ((7 - d.getDay()) % 7)); d.setHours(23, 59, 0, 0); }
+  else { d = new Date(Date.now() + v * 3600000); d.setSeconds(0, 0); }
+  $("pfFin").value = pfFechaIn(d);
+}
+function pfGuardar() {
+  var err = function (t) { $("pfErr").textContent = t; };
+  var tipo = $("pfTipo").value, d = {
+    id: CACHE.pfEdit ? CACHE.pfEdit.id : "", nombre: $("pfNom").value.trim(), tipo: tipo,
+    producto: tipo === "producto" ? $("pfProducto").value : "", precio: tipo === "producto" ? $("pfPre").value : "", pct: tipo === "carrito" ? $("pfPct").value : "",
+    inicio: $("pfIni").value, fin: $("pfFin").value, cupos: $("pfCup").value, codigo: $("pfCod").value, activo: $("pfAct").checked
+  };
+  if (d.nombre.length < 3) return err("Escribe el nombre de la promo.");
+  if (tipo === "producto") {
+    var x = pfProdSel(), pre = Number(String(d.precio).replace(/\D/g, "")) || 0;
+    if (!pre) return err("Escribe el precio especial.");
+    if (x && pre >= x.precio) return err("El precio especial debe ser menor que " + pesos(x.precio) + ".");
+    if (x && x.costo && pre < x.costo && !confirm("⚠️ El precio promo queda por debajo del costo (" + pesos(x.costo) + ").\n¿Guardar de todas formas?")) return;
+  } else if (!(Number(d.pct) >= 1 && Number(d.pct) <= 90)) return err("El descuento debe estar entre 1% y 90%.");
+  var b = $("pfBtn"); b.disabled = true; b.textContent = "Guardando…";
+  api("adm_promo_guardar", d).then(function (r) { CACHE.pf = r; pfPintar(); toast("Promo guardada ✓"); })
+    .catch(function (e) { b.disabled = false; b.textContent = "Guardar"; err(e.message); });
+}
+function pfEstado(i, el) {
+  var p = CACHE.pf.promos[i]; el.disabled = true;
+  api("adm_promo_estado", { id: p.id, activo: el.checked }).then(function (r) { CACHE.pf = r; pfPintar(); toast(el.checked ? "Promo activada ⚡" : "Promo pausada"); })
+    .catch(function (e) { el.checked = !el.checked; el.disabled = false; toast(e.message); });
+}
+function pfEliminar(i, b) {
+  var p = CACHE.pf.promos[i];
+  if (!confirm("¿Eliminar la promo «" + p.nombre + "»?\nSi solo quieres pausarla, usa el interruptor.")) return;
+  b.disabled = true;
+  api("adm_promo_eliminar", { id: p.id }).then(function (r) { CACHE.pf = r; pfPintar(); toast("Promo eliminada"); }).catch(function (e) { b.disabled = false; toast(e.message); });
+}
 
 VISTAS.ajustes = function () {
   $("vista").innerHTML = '<h2>Ajustes</h2><div class="card"><b>Cambiar PIN de ingreso</b>' +
