@@ -548,6 +548,11 @@ function verCliente(tel, abrirComp) {
       '<div class="row" style="margin-top:10px"><span class="mut">🔐 Código de acceso:</span> <b>' + (c.codigo ? esc(c.codigo) : "sin código") + '</b>' +
       '<button class="btn sec sm" onclick="enviarCodigo(\'' + esc(c.contacto) + '\')">' + (c.codigo ? "Enviar código" : "Crear y enviar código") + '</button></div>' +
       (c.saldo ? '<div class="mut" style="margin-top:6px">💳 Saldo por referidos: <b>' + pesos(c.saldo) + '</b></div>' : "") +
+      (function () {
+        var tot = c.perfiles.reduce(function (s, p) { return s + (Number(p.lista) || Number(p.precio) || 0); }, 0);
+        return '<div class="row" style="margin-top:10px;gap:8px"><span class="mut">💰 Total de su cuenta:</span> <b>' + pesos(tot) + '</b><span class="mut fs">' + c.perfiles.length + (c.perfiles.length === 1 ? ' perfil' : ' perfiles') + ' · al mes</span></div>' +
+          (c.perfiles.length > 1 ? '<div class="row" style="margin-top:8px"><button class="btn" onclick="renovarTodo(this)">🔄 Renovar todo · ' + pesos(tot) + '</button></div><div id="rtRes"></div>' : '');
+      })() +
       '<div class="row" style="margin-top:10px" id="compCli"><span class="mut">🤝 Compromiso de pago:</span> ' +
       (c.perfiles.some(function (p) { return p.dias !== null && p.dias !== undefined && p.dias <= 3; }) ? '<button class="btn sec sm" onclick="compFormCli()">🤝 Registrar compromiso</button>' : '<span class="mut">nada por vencer</span>') + '</div>' +
       '<div class="res" id="compRes"></div>' +
@@ -633,6 +638,34 @@ function compGuardarCli(b) {
 }
 function enviarCodigo(tel) {
   api("adm_codigo", { contacto: tel }).then(function (r) { $("cmsg").innerHTML = msgBox(r.mensaje, "Mensaje con el código"); }).catch(function (e) { $("cmsg").innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+}
+// Renueva todos los perfiles del cliente (30 días cada uno, desde su propio vencimiento) y arma un solo mensaje
+function renovarTodo(b) {
+  var c = CACHE.cliente; if (!c) return;
+  var ps = c.perfiles.slice(), tot = ps.reduce(function (s, p) { return s + (Number(p.lista) || Number(p.precio) || 0); }, 0);
+  if (!confirm("¿Ya recibiste el pago de " + pesos(tot) + "? Se renuevan los " + ps.length + " perfiles de " + c.nombre + ", 30 días cada uno desde su vencimiento.")) return;
+  b.disabled = true;
+  var hechos = [], fallos = [], i = 0;
+  var sig = function () {
+    if (i >= ps.length) return fin();
+    var p = ps[i++]; b.textContent = "Renovando " + i + " de " + ps.length + "…";
+    api("adm_renovar", { fila: p.fila }).then(function (r) {
+      hechos.push({ p: p, vence: r.vence });
+      var e = $("f_" + p.fila); if (e) { e.querySelector(".res").innerHTML = '<div style="margin-top:8px"><span class="pill ok">Renovado · vence ' + esc(r.vence) + '</span></div>'; [].forEach.call(e.querySelectorAll('button[onclick^="renovarPerfil"]'), function (x) { x.disabled = true; x.textContent = "✓ Renovado"; }); }
+    }).catch(function (err) { fallos.push(p.plataforma + " (" + err.message + ")"); }).then(sig);
+  };
+  var fin = function () {
+    b.textContent = fallos.length ? "Renovados " + hechos.length + " de " + ps.length : "✓ Todo renovado";
+    var total = hechos.reduce(function (s, h) { return s + (Number(h.p.lista) || Number(h.p.precio) || 0); }, 0);
+    var msj = "¡Hola " + String(c.nombre).split(" ")[0] + "! ✅ Recibimos tu pago y renovamos tus servicios en Street25:\n\n" +
+      hechos.map(function (h) { return "♻️ " + h.p.plataforma + " — perfil " + h.p.perfil + " · vence " + h.vence; }).join("\n") +
+      "\n\n💵 Total: " + pesos(total) + "\n¡Gracias por seguir con nosotros! 🍿";
+    $("rtRes").innerHTML = '<div style="margin-top:8px"><span class="pill ok">' + hechos.length + ' perfil(es) renovados · ' + pesos(total) + '</span></div>' +
+      (fallos.length ? '<div class="err" style="margin-top:6px">No se renovó: ' + esc(fallos.join(", ")) + '</div>' : '') +
+      (hechos.length && c.contacto ? msgBox({ tel: c.contacto, msj: msj }, "Confirmación para el cliente") : '');
+    toast(fallos.length ? "Revisa los que fallaron" : "Todo renovado ✓");
+  };
+  sig();
 }
 function renovarPerfil(fila, btn) {
   if (!confirm("¿Ya recibiste el pago" + (btn.getAttribute("data-m") ? " de " + btn.getAttribute("data-m") : "") + "? Se sumarán 30 días a este perfil y queda con el valor actual del perfil.")) return;
