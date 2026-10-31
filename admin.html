@@ -1009,11 +1009,14 @@ function calCargar() {
   var box = $("calCm"); if (!box) return;
   box.innerHTML = '<div class="load">Armando calendario de pagos…</div>';
   api("adm_calendario_cm").then(function (r) {
-    var s = r.resumen || {};
-    if (!r.cuentas.length) { box.innerHTML = '<div class="card" style="margin-top:12px">📅 Ninguna cuenta madre vence en los próximos 14 días.</div>'; return; }
-    box.innerHTML = '<h2 style="margin-top:18px">📅 Pagos de cuentas madre · próximos 14 días</h2><div class="mut" style="margin:-6px 2px 10px">Ordenadas por urgencia: primero las vencidas, luego las que vencen antes y, a igual fecha, las que tienen más clientes.</div>' +
-      '<div class="fgrid">' + finKpi("A pagar esta semana", pesos(s.pagarSemana), null, (s.vencidas ? s.vencidas + " vencida(s) · " : "") + s.semana + " vence(n) en 7 días") +
-      finKpi("Clientes en riesgo", String(s.clientesEnRiesgo), null, "en cuentas que vencen en ≤7 días") + finKpi("Total 14 días", pesos(s.pagar14)) + '</div>' +
+    // Solo cuentas vencidas o que vencen en 3 días o menos
+    r.cuentas = r.cuentas.filter(function (c) { return c.dias <= 3; });
+    if (!r.cuentas.length) { box.innerHTML = '<div class="card" style="margin-top:12px">📅 Ninguna cuenta madre vence en los próximos 3 días.</div>'; return; }
+    var venc = r.cuentas.filter(function (c) { return c.dias < 0; }).length;
+    var pagar = r.cuentas.reduce(function (s, c) { return s + c.costo; }, 0), enRiesgo = r.cuentas.reduce(function (s, c) { return s + c.clientes; }, 0);
+    box.innerHTML = '<h2 style="margin-top:18px">📅 Cuentas por vencer · 3 días o menos</h2><div class="mut" style="margin:-6px 2px 10px">Primero las vencidas, luego las que vencen antes y, a igual fecha, las que tienen más clientes.</div>' +
+      '<div class="fgrid">' + finKpi("A pagar", pesos(pagar), null, r.cuentas.length + " cuenta(s)" + (venc ? " · " + venc + " vencida(s)" : "")) +
+      finKpi("Clientes en riesgo", String(enRiesgo), null, "en estas cuentas") + '</div>' +
       '<div class="card" style="margin-top:10px">' + r.cuentas.map(function (c) {
         return '<div style="padding:10px 0;border-top:1px solid var(--line)"><div><b>' + esc(c.id) + ' · ' + esc(c.plataforma) + '</b><div class="mut fs">' + esc(c.proveedor || "sin proveedor") + ' · vence ' + esc(c.vence) + ' · ' + c.clientes + '/' + c.perfiles + ' clientes · costo ' + pesos(c.costo) + ' · deja ' + (c.deja < 0 ? '−' : '') + pesos(Math.abs(c.deja)) + '</div>' +
           (c.sinRespaldo && c.clientes ? '<div class="vend" style="white-space:normal;margin-top:4px">⚠️ Si se cae, solo hay ' + c.libresOtras + ' perfil(es) libre(s) de ' + esc(c.plataforma) + ' para mover a sus ' + c.clientes + ' clientes</div>' : '') + '</div>' +
