@@ -566,24 +566,39 @@ function pintarPedirCodigo() {
     '?text=' + encodeURIComponent("Hola, olvidé mi código de acceso de Street25") + '">Pídelo por WhatsApp</a>';
 }
 
+// Combos: si marca todas las plataformas de un combo, cada perfil va con su parte del precio del combo
+function renPrecios() {
+  var m = {}, ok = [];
+  ((REN && REN.combos) || []).forEach(function (k) {
+    if (k.filas.every(function (f) { return renSel[f]; })) { ok.push(k); k.filas.forEach(function (f) { m[f] = k.reparto[f]; }); }
+  });
+  return { m: m, ok: ok };
+}
+function renPrecio(p, rp) { return rp.m[p.fila] !== undefined ? Number(rp.m[p.fila]) : p.precio; }
 function renTotal() {
-  var t = 0, n = 0, f = 0;
-  (REN ? REN.perfiles : []).forEach(function (p) { if (renSel[p.fila]) { t += p.precio; n++; f += Math.max(p.full || 0, p.precio); } });
+  var t = 0, n = 0, f = 0, rp = renPrecios();
+  (REN ? REN.perfiles : []).forEach(function (p) { if (renSel[p.fila]) { t += renPrecio(p, rp); n++; f += Math.max(p.full || 0, p.precio); } });
   var c = Math.min((REN && REN.credito) || 0, t);
   return { t: t - c, n: n, f: f, bruto: t, c: c };
 }
 
 function pintarRenovar() {
   var box = document.getElementById("renLista");
-  var tot = renTotal();
+  var tot = renTotal(), rp = renPrecios();
   box.innerHTML = '<p style="margin:14px 0 4px;font-weight:600">Hola ' + esc(REN.nombre || "") + ' 👋 estos son tus perfiles:</p>' +
     REN.perfiles.map(function (p) {
       var est = p.dias === null ? '<small>Sin fecha</small>' :
         (p.dias < 0 ? '<small class="v">Vencido hace ' + (-p.dias) + ' días · ' + esc(p.vence) + '</small>' :
         (p.dias <= 5 ? '<small class="p">Vence en ' + p.dias + ' días · ' + esc(p.vence) + '</small>' : '<small>Vence el ' + esc(p.vence) + ' (' + p.dias + ' días)</small>'));
       return '<label class="rp"><input type="checkbox"' + (renSel[p.fila] ? " checked" : "") + ' onchange="renSel[' + p.fila + ']=this.checked;pintarRenovar()">' +
-        '<span class="t">' + esc(p.plataforma) + ' · perfil ' + esc(p.perfil) + est + '</span><b>' + (Math.max(p.full || 0, p.precio) > p.precio ? '<s class="old">' + pesos(p.full) + '</s>' : '') + pesos(p.precio) + '</b></label>';
+        '<span class="t">' + esc(p.plataforma) + ' · perfil ' + esc(p.perfil) + est + '</span><b>' + (Math.max(p.full || 0, p.precio) > renPrecio(p, rp) ? '<s class="old">' + pesos(Math.max(p.full || 0, p.precio)) + '</s>' : '') + pesos(renPrecio(p, rp)) + '</b></label>';
     }).join("") +
+    ((REN.combos || []).map(function (k) {
+      var on = rp.ok.indexOf(k) !== -1;
+      var plats = REN.perfiles.filter(function (p) { return k.filas.indexOf(p.fila) !== -1; }).map(function (p) { return p.plataforma; }).join(", ");
+      return '<p class="credNota">' + (on ? '🎁 Combo <b>' + esc(k.nombre) + '</b> aplicado: pagas ' + pesos(k.precio) + ' en vez de ' + pesos(k.normal) + ' (ahorras ' + pesos(k.ahorro) + ').'
+        : '💡 Renueva juntos ' + esc(plats) + ' y pagas el combo <b>' + esc(k.nombre) + '</b>: ' + pesos(k.precio) + ' (ahorras ' + pesos(k.ahorro) + ').') + '</p>';
+    }).join("")) +
     (REN.credito > 0 ? '<p class="credNota">💳 Tienes <b>' + pesos(REN.credito) + '</b> de crédito por referidos' + (tot.c ? ': se descuentan ' + pesos(tot.c) + ' de este pago.' : '.') + '</p>' : '') +
     '<button class="cta full" onclick="abrirRenovacion()"' + (tot.n ? "" : " disabled") + '>Renovar ' + tot.n + (tot.n === 1 ? " perfil" : " perfiles") + ' · ' + pesos(tot.t) + '</button>';
 }
@@ -938,11 +953,12 @@ function pintarCarrito() {
     var rt = renTotal();
     document.getElementById("total").textContent = pesos(rt.t);
     document.getElementById("total2").textContent = pesos(rt.t);
+    var rp = renPrecios();
     document.getElementById("lineas").innerHTML = REN.perfiles.filter(function (p) { return renSel[p.fila]; }).map(function (p) {
-      var full = Math.max(p.full || 0, p.precio);
+      var full = Math.max(p.full || 0, p.precio), pr = renPrecio(p, rp);
       return '<div class="line"><span>🔄 ' + esc(p.plataforma) + ' <small style="color:var(--mut)">perfil ' + esc(p.perfil) + '</small></span><span class="r">' +
-        (full > p.precio ? '<s class="old">' + pesos(full) + '</s>' : "") + pesos(p.precio) + '</span></div>';
-    }).join("") + (rt.c ? '<div class="line"><span>💳 Crédito por referidos</span><span class="r">-' + pesos(rt.c) + '</span></div>' : "") + lineaAhorro(rt.f, rt.bruto);
+        (full > pr ? '<s class="old">' + pesos(full) + '</s>' : "") + pesos(pr) + '</span></div>';
+    }).join("") + rp.ok.map(function (k) { return '<div class="line"><span>🎁 Combo ' + esc(k.nombre) + '</span><span class="r">' + pesos(k.precio) + '</span></div>'; }).join("") + (rt.c ? '<div class="line"><span>💳 Crédito por referidos</span><span class="r">-' + pesos(rt.c) + '</span></div>' : "") + lineaAhorro(rt.f, rt.bruto);
     return;
   }
   document.getElementById("total").textContent = pesos(r.t);
