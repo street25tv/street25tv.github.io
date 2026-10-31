@@ -991,13 +991,19 @@ VISTAS.cuentas = function () {
     $("vista").innerHTML = '<div class="row" style="margin-bottom:12px"><h2 style="margin:0">Cuentas madre</h2><span class="sp"></span><button class="btn" onclick="formCm()">＋ Nueva cuenta</button></div>' +
       '<div class="fgrid">' + finKpi("Cuentas", res.todas) + finKpi("Por vencer (≤5 d)", res.vencer) + finKpi("Vencidas", res.vencidas) + finKpi("Caídas", res.caidas) + finKpi("Perfiles libres", res.libres) + '</div>' +
       '<div id="calCm"></div>' +
+      '<button class="btn sec" style="margin-top:14px;width:100%" onclick="cmVerTodas(this)" data-n="' + res.todas + '">📋 Ver todas las cuentas (' + res.todas + ')</button><div id="cmTodas" class="oculto">' +
       '<div class="card" style="margin-top:12px"><input class="in" id="cmQ" placeholder="Buscar por ID, correo o proveedor" autocomplete="off" oninput="filtrarCm()">' +
       '<div class="row" style="margin-top:10px">' + chip("todas", "Todas") + chip("vencer", "⏳ Por vencer") + chip("vencidas", "⛔ Vencidas") + chip("caidas", "🚨 Caídas") +
       '<span class="sp"></span><select class="in" id="cmP" style="width:auto" onchange="filtrarCm()"><option value="">Todas las plataformas</option>' +
-      Object.keys(plats).sort().map(function (p) { return '<option>' + esc(p) + '</option>'; }).join("") + '</select></div></div><div id="cmLista"></div>';
+      Object.keys(plats).sort().map(function (p) { return '<option>' + esc(p) + '</option>'; }).join("") + '</select></div></div><div id="cmLista"></div></div>';
     filtrarCm(); calCargar();
   }).catch(fallo);
 };
+// La vista de Cuentas muestra solo las que están por vencer; la lista completa queda detrás de este botón
+function cmVerTodas(b) {
+  var box = $("cmTodas"); box.classList.toggle("oculto");
+  b.textContent = box.classList.contains("oculto") ? "📋 Ver todas las cuentas (" + b.getAttribute("data-n") + ")" : "Ocultar lista completa";
+}
 // Calendario: qué cuentas madre pagar primero (vencen antes y tienen más clientes)
 function calCargar() {
   var box = $("calCm"); if (!box) return;
