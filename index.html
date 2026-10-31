@@ -94,6 +94,52 @@
   .drop img{max-width:100%;max-height:180px;border-radius:10px;margin-top:10px}
   .chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--mut);margin-top:14px}
   .chk input{margin-top:3px;accent-color:var(--acc)}
+  .wzSteps{display:flex;gap:6px;margin:-4px 0 16px}
+  .wzSt{flex:1;text-align:center;font-size:11.5px;color:var(--mut)}
+  .wzSt i{display:block;height:5px;border-radius:5px;background:var(--line);margin-bottom:6px}
+  .wzSt.on{color:var(--txt);font-weight:600}.wzSt.on i{background:linear-gradient(90deg,var(--acc),var(--acc2))}
+  .wzSt.ok{color:var(--ok)}.wzSt.ok i{background:var(--ok)}
+  .wzH{font-size:20px;font-weight:700;margin-bottom:2px}
+  .wzHint{color:var(--mut);font-size:13px;margin-bottom:14px}
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(min-width:520px){.tiles{grid-template-columns:1fr 1fr 1fr}}
+  .tile{position:relative;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:12px;text-align:left;color:var(--txt);font-family:inherit}
+  .tile.sel{border-color:var(--acc);background:#22162a}
+  .tile:disabled{opacity:.45;cursor:not-allowed}
+  .tile img{width:40px;height:40px;border-radius:11px;object-fit:cover;display:block;margin-bottom:8px;background:#fff1}
+  .tile b{display:block;font-size:14.5px;line-height:1.2}.tile small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+  .tile .tp{display:block;font-weight:700;font-size:15px;margin-top:4px}
+  .tile .tk{position:absolute;top:10px;right:10px;min-width:24px;height:24px;border-radius:12px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;padding:0 4px}
+  .tile.sel .tk{background:var(--acc);border-color:var(--acc)}
+  .wzMas{display:block;margin:12px auto 0;background:none;color:#b9a8ff;font-weight:600;font-size:13.5px}
+  .wzCombo{margin-top:8px;background:linear-gradient(90deg,rgba(255,61,110,.18),rgba(123,92,255,.18));border:1px solid rgba(255,61,110,.45);border-radius:14px;padding:11px 12px;font-size:13px;display:flex;gap:10px;align-items:center}
+  .wzCombo .pill{margin-left:auto;background:var(--acc);border-radius:20px;padding:6px 10px;font-weight:700;font-size:12px;white-space:nowrap;color:#fff}
+  .wzCombo.sug{background:var(--card);border-color:var(--line)}
+  .wzCombo.sug .pill{background:var(--acc2)}
+  .wzBox{background:var(--card);border-radius:16px;padding:6px 14px 12px;margin-top:6px}
+  .wzBox .line:last-of-type{border-bottom:0}
+  details.wzPromo{margin-top:12px}details.wzPromo summary{cursor:pointer;color:#b9a8ff;font-weight:600;font-size:13.5px;list-style:none}
+  .wzFoot{position:sticky;bottom:-28px;margin:16px -18px -28px;padding:12px 18px calc(18px + env(safe-area-inset-bottom));background:var(--bg2);border-top:1px solid var(--line)}
+  .wzFoot .full{margin-top:0}
+  .wzMini{display:flex;justify-content:space-between;font-size:13px;color:var(--mut);margin-bottom:9px}.wzMini b{color:var(--txt);font-size:15px}
+  .cta.verde{background:var(--ok)}
+  .wzLegal{text-align:center;color:var(--mut);font-size:11.5px;margin-top:8px}.wzLegal a{text-decoration:underline;cursor:pointer}
+  .ptabs{display:flex;background:var(--card);border-radius:12px;padding:4px;margin-bottom:10px}
+  .ptabs button{flex:1;background:none;color:var(--mut);padding:9px;border-radius:9px;font-size:14px;font-weight:600}
+  .ptabs button.on{background:var(--bg2);color:var(--txt)}
+  .pnum{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .pnum small{display:block;color:var(--mut);font-size:12px}.pnum b{font-size:22px;letter-spacing:.5px}
+  .pnum .copy{padding:9px 13px;font-size:13px;font-weight:600}
+  .drop.wzd{border-color:var(--acc);background:rgba(255,61,110,.06);color:var(--txt);padding:20px}
+  .drop.wzd small{color:var(--mut)}
+  .buyCta{margin:0 0 14px;font-size:16px;padding:15px}
+  .tline{text-align:left;background:var(--card);border-radius:14px;padding:6px 14px;margin:14px 0}
+  .tline div{display:flex;gap:12px;padding:9px 0;font-size:14px;align-items:flex-start}
+  .tline i{width:24px;height:24px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-style:normal;background:var(--bg2);color:var(--mut)}
+  .tline i.d{background:var(--ok);color:#fff}
+  .tline small{display:block;color:var(--mut);font-size:12px}
+  .codBox{background:rgba(123,92,255,.12);border:1px solid var(--acc2);border-radius:14px;padding:12px;margin:12px 0;font-size:13.5px;text-align:center}
+  .codBox b{display:block;font-size:26px;letter-spacing:4px;margin:4px 0}
   .terms{font-size:12px;color:var(--mut);background:var(--card);border-radius:12px;padding:12px;margin-top:10px;line-height:1.6}
   .err{background:rgba(255,61,110,.12);border:1px solid var(--acc);color:#ffc2d1;padding:10px 12px;border-radius:12px;font-size:13px;margin-top:12px;display:none}
   .full{width:100%;margin-top:16px}
@@ -303,6 +349,7 @@
 <main class="wrap">
   <div class="refBanner" id="refBanner" style="display:none"></div>
   <section class="accesos" id="accesos">
+    <button class="cta full buyCta" onclick="abrirCompra()">🛒 Comprar en 3 pasos</button>
     <div class="acTabs">
       <button class="acTab on" id="tab-renovar" onclick="acTab('renovar')">🔄 Renovar mi perfil</button>
       <button class="acTab" id="tab-consultar" onclick="acTab('consultar')">🔑 Consultar mi cuenta</button>
@@ -329,9 +376,9 @@
     </div>
     <div class="renbox acPanel" id="como">
     <div class="how">
-    <div class="step"><b>1. Elige</b><p>Agrega al carrito los perfiles que quieras.</p></div>
-    <div class="step"><b>2. Paga</b><p>Transfiere el total por Nequi o DaviPlata y sube la captura.</p></div>
-    <div class="step"><b>3. Recibe</b><p>Cuando confirmemos el pago, tus accesos aparecen aquí mismo.</p></div>
+    <div class="step"><b>1. Elige</b><p>Toca las plataformas que quieres. Si forman un combo, el descuento se aplica solo.</p></div>
+    <div class="step"><b>2. Tus datos</b><p>Solo tu nombre y tu WhatsApp.</p></div>
+    <div class="step"><b>3. Paga</b><p>Transfiere por Nequi o DaviPlata y sube la captura. Tus accesos llegan aquí y por WhatsApp.</p></div>
   </div>
     </div>
   </section>
@@ -364,47 +411,56 @@
 <div class="cartbar" id="cartbar">
   <div class="wrap">
     <div class="info"><span id="cbCount">0 perfiles</span><b id="cbTotal">$0</b></div>
-    <button class="cta" onclick="abrirCarrito()">Ver carrito →</button>
+    <button class="cta" onclick="abrirCarrito()">Comprar →</button>
   </div>
 </div>
 
 <div class="modal" id="mCarrito" onclick="if(event.target===this)cerrar('mCarrito')">
   <div class="sheet">
-    <div class="shead"><h3 id="shTitulo">Tu pedido</h3><button class="x" onclick="cerrar('mCarrito')">✕</button></div>
-    <div id="lineas"></div>
-    <div class="tot"><span>Total (<span id="dias">30</span> días)</span><span id="total">$0</span></div>
-    <div id="pcodeBox">
-      <div class="pcode"><input type="text" id="pcode" placeholder="¿Tienes un código de promo?" maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')aplicarCodigo()"><button class="ghost" id="pcodeBtn" onclick="aplicarCodigo()">Aplicar</button></div>
-      <div class="pcmsg" id="pcmsg"></div>
+    <div class="shead"><button class="x" id="wzBack" onclick="wzAtras()" aria-label="Atrás">←</button><h3 id="shTitulo" style="flex:1;margin:0 10px">Tu pedido</h3><button class="x" onclick="cerrar('mCarrito')">✕</button></div>
+    <div class="wzSteps" id="wzSteps"><div class="wzSt" id="wzS1"><i></i>1. Elige</div><div class="wzSt" id="wzS2"><i></i>2. Tus datos</div><div class="wzSt" id="wzS3"><i></i>3. Paga</div></div>
+
+    <div id="wz1">
+      <h2 class="wzH">¿Qué quieres ver?</h2>
+      <p class="wzHint">Toca las plataformas. Cada una es un perfil tuyo por <span id="dias">30</span> días.</p>
+      <div id="wzCombos" style="margin:-4px 0 12px"></div>
+      <div class="tiles" id="tiles"></div>
+      <button class="wzMas" id="wzMas" onclick="WZ_MAS=!WZ_MAS;pintarTiles()"></button>
     </div>
 
-    <div class="sec" id="secDatos">
-      <h4>Tus datos</h4>
-      <label class="f" for="nombre">Nombre</label>
-      <input type="text" id="nombre" placeholder="Ej: Ana Gómez" maxlength="60" autocomplete="name">
-      <label class="f" for="wa">WhatsApp</label>
-      <input type="tel" id="wa" placeholder="Ej: 3001234567" maxlength="13" inputmode="numeric" autocomplete="tel">
-      <label class="f" for="clave">Tu código de acceso (6 números)</label>
-      <input type="password" id="clave" placeholder="Crea un código de 6 números" maxlength="6" inputmode="numeric" autocomplete="new-password">
-      <small style="display:block;color:var(--mut);font-size:12px;margin-top:4px">Con tu WhatsApp y este código verás tus datos cuando quieras en «Consultar mi cuenta». Si ya eres cliente y tienes código, déjalo vacío.</small>
+    <div id="wz2">
+      <div id="secDatos">
+        <h2 class="wzH">¿A quién se lo enviamos?</h2>
+        <p class="wzHint">Solo 2 datos. Por WhatsApp te llegan tus accesos.</p>
+        <label class="f" for="nombre">Tu nombre</label>
+        <input type="text" id="nombre" placeholder="Ej: Ana Gómez" maxlength="60" autocomplete="name">
+        <label class="f" for="wa">Tu WhatsApp</label>
+        <input type="tel" id="wa" placeholder="Ej: 3001234567" maxlength="13" inputmode="numeric" autocomplete="tel">
+        <small style="display:block;color:var(--mut);font-size:12px;margin-top:6px">📲 Aquí te llegan los accesos. Tu código para consultar tu cuenta te lo damos al final.</small>
+      </div>
+      <div class="wzBox"><div id="lineas"></div><div class="tot"><span>Total · 30 días</span><span id="total">$0</span></div></div>
+      <details class="wzPromo" id="pcodeBox"><summary>🏷️ ¿Tienes un código de promo?</summary>
+        <div class="pcode"><input type="text" id="pcode" placeholder="Escribe tu código" maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')aplicarCodigo()"><button class="ghost" id="pcodeBtn" onclick="aplicarCodigo()">Aplicar</button></div>
+        <div class="pcmsg" id="pcmsg"></div>
+      </details>
     </div>
 
-    <div class="sec">
-      <h4>Paga aquí</h4>
+    <div id="wz3">
+      <div class="wzBox" id="resRen" style="margin-bottom:12px"></div>
       <div class="amount">Transfiere exactamente<b id="total2">$0</b></div>
+      <div class="ptabs" id="ptabs"></div>
       <div id="pagos"></div>
-    </div>
-
-    <div class="sec">
-      <h4>Comprobante</h4>
-      <label class="drop" id="drop" for="file">📎 Toca para subir la captura del pago<br><small>Imagen o PDF</small></label>
+      <label class="drop wzd" id="drop" for="file">📸 <b>Sube la captura del pago</b><br><small>Cuando hayas transferido, toca aquí</small></label>
       <input type="file" id="file" accept="image/*,application/pdf" hidden onchange="leerArchivo(this)">
     </div>
 
-    <div class="terms" id="terms"></div>
-    <label class="chk"><input type="checkbox" id="acepto"> Acepto las condiciones del servicio.</label>
     <div class="err" id="err"></div>
-    <button class="cta full" id="btnEnviar" onclick="enviar()">Enviar pedido</button>
+    <div class="wzFoot">
+      <div class="wzMini" id="wzMini"></div>
+      <button class="cta full" id="btnEnviar" onclick="wzSig()">Continuar →</button>
+      <div class="wzLegal" id="wzLegal">Al enviar aceptas las <a onclick="var t=document.getElementById('terms');t.style.display=t.style.display==='none'?'':'none'">condiciones del servicio</a></div>
+      <div class="terms" id="terms" style="display:none"></div>
+    </div>
   </div>
 </div>
 
@@ -924,8 +980,9 @@ function cambiar(id, d) {
   var it = item(id); if (!it) return;
   var n = Math.max(0, Math.min(it.disponibles, (carrito[id] || 0) + d));
   if (n) carrito[id] = n; else delete carrito[id];
+  var hecho = d > 0 ? autoCombo() : null;
   pintarCatalogo(); pintarCarrito();
-  if (d > 0) toast("Agregado al carrito");
+  if (d > 0) toast(hecho ? "🎁 Combo " + hecho.nombre + ": ahorras " + pesos(hecho.ahorro) : "Agregado al carrito");
 }
 function resumen() {
   var n = 0, t = 0, f = 0;
@@ -946,19 +1003,17 @@ function pintarCarrito() {
   document.getElementById("cbCount").textContent = r.n + (r.n === 1 ? " perfil" : " perfiles") + (r.f > r.t ? " · ahorras " + pesos(r.f - r.t) : "");
   document.getElementById("cbTotal").textContent = pesos(r.t);
   var esRen = modo === "renovacion";
-  document.getElementById("shTitulo").textContent = esRen ? "Renovar perfiles" : "Tu pedido";
-  document.getElementById("secDatos").style.display = esRen ? "none" : "";
-  document.getElementById("pcodeBox").style.display = esRen ? "none" : "";
   if (esRen) {
     var rt = renTotal();
     document.getElementById("total").textContent = pesos(rt.t);
     document.getElementById("total2").textContent = pesos(rt.t);
     var rp = renPrecios();
-    document.getElementById("lineas").innerHTML = REN.perfiles.filter(function (p) { return renSel[p.fila]; }).map(function (p) {
+    document.getElementById("resRen").innerHTML = REN.perfiles.filter(function (p) { return renSel[p.fila]; }).map(function (p) {
       var full = Math.max(p.full || 0, p.precio), pr = renPrecio(p, rp);
       return '<div class="line"><span>🔄 ' + esc(p.plataforma) + ' <small style="color:var(--mut)">perfil ' + esc(p.perfil) + '</small></span><span class="r">' +
         (full > pr ? '<s class="old">' + pesos(full) + '</s>' : "") + pesos(pr) + '</span></div>';
     }).join("") + rp.ok.map(function (k) { return '<div class="line"><span>🎁 Combo ' + esc(k.nombre) + '</span><span class="r">' + pesos(k.precio) + '</span></div>'; }).join("") + (rt.c ? '<div class="line"><span>💳 Crédito por referidos</span><span class="r">-' + pesos(rt.c) + '</span></div>' : "") + lineaAhorro(rt.f, rt.bruto);
+    wzPintar();
     return;
   }
   document.getElementById("total").textContent = pesos(r.t);
@@ -968,23 +1023,177 @@ function pintarCarrito() {
     return '<div class="line"><span>' + carrito[id] + ' × ' + esc(it.plataforma) + ' <small style="color:var(--mut)">' + esc(it.tipo) + '</small>' + (pi.p ? '<small class="cl" style="color:#f59e0b">⚡ ' + esc(pi.p.nombre) + '</small>' : "") +
       (it.combo ? '<small class="cl">' + it.componentes.map(function (k) { return esc(k.plataforma) + " " + pesos(pi.p && it.promo && pi.p.id === it.promo.id && k.promo ? k.promo : k.precio); }).join(" · ") + '</small>' : "") + '</span>' +
       '<span class="r">' + (full > pi.u ? '<s class="old">' + pesos(carrito[id] * full) + '</s>' : "") + pesos(carrito[id] * pi.u) +
-      '<button class="del" onclick="cambiar(\'' + id + '\',-' + carrito[id] + ');if(!resumen().n)cerrar(\'mCarrito\')">quitar</button></span></div>';
+      '<button class="del" onclick="cambiar(\'' + id + '\',-' + carrito[id] + ');if(!resumen().n)wzIr(1)">quitar</button></span></div>';
   }).join("") + lineaAhorro(r.f, r.t);
+  wzPintar();
 }
+var PAGO_I = 0;
 function pintarPagos() {
-  document.getElementById("pagos").innerHTML = (CAT.pagos || []).map(function (p) {
-    var fila = function (et, v) { return v ? '<div class="row"><span>' + et + '</span><b>' + esc(v) + '</b><button class="copy" onclick="copiar(\'' + esc(String(v).replace(/\s/g, "")) + '\')">Copiar</button></div>' : ""; };
-    return '<div class="pay"><div class="pm">' + esc(p.metodo) + '</div>' + fila("Número", p.numero) + fila("Llave", p.llave) +
-      '<div class="row"><span>Titular</span><b>' + esc(p.titular) + '</b><span></span></div></div>';
-  }).join("");
+  var ps = CAT.pagos || [];
+  if (PAGO_I >= ps.length) PAGO_I = 0;
+  document.getElementById("ptabs").style.display = ps.length > 1 ? "" : "none";
+  document.getElementById("ptabs").innerHTML = ps.map(function (p, i) { return '<button class="' + (i === PAGO_I ? "on" : "") + '" onclick="PAGO_I=' + i + ';pintarPagos()">' + esc(p.metodo) + '</button>'; }).join("");
+  var p = ps[PAGO_I];
+  var fila = function (et, v) { return v ? '<div class="row"><span>' + et + '</span><b>' + esc(v) + '</b><button class="copy" onclick="copiar(\'' + esc(String(v).replace(/\s/g, "")) + '\')">Copiar</button></div>' : ""; };
+  document.getElementById("pagos").innerHTML = !p ? "" : '<div class="pay">' +
+    (p.numero ? '<div class="pnum"><div><small>Número ' + esc(p.metodo) + '</small><b>' + esc(p.numero) + '</b></div><button class="copy" onclick="copiar(\'' + esc(String(p.numero).replace(/\s/g, "")) + '\')">📋 Copiar</button></div>' : '<div class="pm">' + esc(p.metodo) + '</div>') +
+    fila("Llave", p.llave) + (p.titular ? '<div class="row"><span>A nombre de</span><b>' + esc(p.titular) + '</b><span></span></div>' : "") + '</div>';
   document.getElementById("terms").innerHTML = "<b>Condiciones</b><br>" + TERMINOS.map(function (t) { return "• " + esc(t); }).join("<br>");
 }
-function abrirCarrito() {
+function abrirCarrito(paso) {
+  if (!CAT) return toast("Cargando el catálogo…");
   var d = leerLocal("st25_cliente", {});
   if (d.nombre && !document.getElementById("nombre").value) document.getElementById("nombre").value = d.nombre;
   if (d.wa && !document.getElementById("wa").value) document.getElementById("wa").value = d.wa;
   modo = "compra";
-  pintarCarrito(); abrir("mCarrito");
+  autoCombo();
+  WZ = paso || (resumen().n ? 2 : 1);
+  pintarCatalogo(); pintarCarrito(); abrir("mCarrito"); wzIr(WZ);
+}
+function abrirCompra() { abrirCarrito(1); }
+
+// ===================== COMPRA EN 3 PASOS =====================
+var WZ = 1, WZ_MAS = false, WZ_TOP = 6;
+function wzSueltos() {
+  return CAT.items.filter(function (x) { return !x.combo; }).sort(function (a, b) {
+    return (a.disponibles <= 0) - (b.disponibles <= 0) || compPlat(clavePlat(a.plataforma), clavePlat(b.plataforma)) || a.precio - b.precio;
+  });
+}
+// El perfil suelto del catálogo que corresponde a una plataforma de un combo
+function wzSueltoDe(k) {
+  return CAT.items.filter(function (x) { return !x.combo && normTxt(x.plataforma) === normTxt(k.plataforma) && normTxt(x.tipo) === normTxt(k.tipo); })[0];
+}
+function wzComboIds(c) { var ids = c.componentes.map(wzSueltoDe); return ids.every(Boolean) ? ids.map(function (x) { return x.id; }) : null; }
+// Cuántos perfiles de este suelto hay en el carrito (sueltos + dentro de combos)
+function wzCuenta(id) {
+  var n = carrito[id] || 0;
+  Object.keys(carrito).forEach(function (cid) { var c = item(cid); if (c && c.combo) { var ids = wzComboIds(c); if (ids) ids.forEach(function (x) { if (x === id) n += carrito[cid]; }); } });
+  return n;
+}
+// Arma solo el combo más barato: separa los combos en perfiles y vuelve a agrupar por el mayor ahorro
+function autoCombo() {
+  if (!CAT) return null;
+  var antes = JSON.stringify(carrito), primero = null;
+  Object.keys(carrito).forEach(function (cid) {
+    var c = item(cid); if (!c || !c.combo) return;
+    var ids = wzComboIds(c); if (!ids) return;
+    ids.forEach(function (x) { carrito[x] = (carrito[x] || 0) + carrito[cid]; });
+    delete carrito[cid];
+  });
+  var combos = CAT.items.filter(function (x) { return x.combo && x.disponibles > 0 && wzComboIds(x); });
+  for (var vuelta = 0; vuelta < 20; vuelta++) {
+    var mejor = null;
+    combos.forEach(function (c) {
+      var ids = wzComboIds(c), need = {};
+      ids.forEach(function (x) { need[x] = (need[x] || 0) + 1; });
+      if (!Object.keys(need).every(function (x) { return (carrito[x] || 0) >= need[x]; })) return;
+      if ((carrito[c.id] || 0) + 1 > c.disponibles) return;
+      var suelto = ids.reduce(function (s, x) { return s + precioItem(item(x)).u; }, 0), ahorro = suelto - precioItem(c).u;
+      if (ahorro > 0 && (!mejor || ahorro > mejor.ahorro)) mejor = { c: c, ids: ids, ahorro: ahorro };
+    });
+    if (!mejor) break;
+    mejor.ids.forEach(function (x) { carrito[x]--; if (!carrito[x]) delete carrito[x]; });
+    carrito[mejor.c.id] = (carrito[mejor.c.id] || 0) + 1;
+    if (!primero) primero = { nombre: mejor.c.plataforma, ahorro: mejor.ahorro };
+  }
+  var antesObj = JSON.parse(antes), nuevo = Object.keys(carrito).some(function (k) { var c = item(k); return c && c.combo && (carrito[k] || 0) > (antesObj[k] || 0); });
+  return nuevo ? primero : null;
+}
+function wzTocar(id) {
+  var it = item(id); if (!it) return;
+  if (wzCuenta(id)) {
+    if (carrito[id]) { carrito[id]--; if (!carrito[id]) delete carrito[id]; }
+    else {
+      var cid = Object.keys(carrito).filter(function (k) { var c = item(k); var ids = c && c.combo && wzComboIds(c); return ids && ids.indexOf(id) !== -1; })[0];
+      if (cid) {
+        var ids = wzComboIds(item(cid)), quitado = false;
+        carrito[cid]--; if (!carrito[cid]) delete carrito[cid];
+        ids.forEach(function (x) { if (x === id && !quitado) { quitado = true; return; } carrito[x] = (carrito[x] || 0) + 1; });
+      }
+    }
+    autoCombo();
+  } else {
+    if (it.disponibles <= 0) return toast("Agotado por ahora");
+    carrito[id] = (carrito[id] || 0) + 1;
+    var h = autoCombo();
+    if (h) toast("🎁 ¡Es un combo! Ahorras " + pesos(h.ahorro));
+  }
+  pintarCatalogo(); pintarCarrito();
+}
+function pintarTiles() {
+  if (!CAT) return;
+  var lista = wzSueltos(), sel = lista.filter(function (x) { return wzCuenta(x.id); });
+  var ver = WZ_MAS ? lista : lista.slice(0, WZ_TOP);
+  sel.forEach(function (x) { if (ver.indexOf(x) === -1) ver.push(x); });
+  document.getElementById("tiles").innerHTML = ver.map(function (it) {
+    var n = wzCuenta(it.id), pi = precioItem(it), agot = it.disponibles <= 0 && !n;
+    return '<button class="tile' + (n ? " sel" : "") + '" onclick="wzTocar(\'' + it.id + '\')"' + (agot ? " disabled" : "") + '><span class="tk">' + (n > 1 ? "×" + n : n ? "✓" : "") + '</span>' +
+      imgTag(imgPlat(it.plataforma), "", imgRespaldo(it.plataforma)) + '<b>' + esc(it.plataforma) + '</b><small>' + (agot ? "Agotado" : esc(it.tipo && !/normal/i.test(it.tipo) ? it.tipo : "Perfil propio")) + '</small><span class="tp">' + pesos(pi.u) + '</span></button>';
+  }).join("");
+  var resto = lista.length - WZ_TOP;
+  var m = document.getElementById("wzMas");
+  m.style.display = resto > 0 ? "" : "none";
+  m.textContent = WZ_MAS ? "Ver menos ⌃" : "Ver " + resto + (resto === 1 ? " plataforma más ⌄" : " plataformas más ⌄");
+  // Combos aplicados y sugerencia del combo más cercano
+  var h = Object.keys(carrito).filter(function (k) { var c = item(k); return c && c.combo; }).map(function (k) {
+    var c = item(k), ids = wzComboIds(c) || [];
+    var suelto = ids.reduce(function (s, x) { return s + precioItem(item(x)).u; }, 0) || Math.max(c.full || 0, c.precio);
+    var ah = suelto - precioItem(c).u;
+    return '<div class="wzCombo">🎁<div><b>¡Es un combo!</b><br>' + esc(c.plataforma) + (carrito[k] > 1 ? " ×" + carrito[k] : "") + ' por ' + pesos(carrito[k] * precioItem(c).u) + '</div>' + (ah > 0 ? '<span class="pill">Ahorras ' + pesos(carrito[k] * ah) + '</span>' : '') + '</div>';
+  }).join("");
+  if (!h && sel.length) {
+    var mejor = null;
+    CAT.items.forEach(function (c) {
+      var ids = c.combo && c.disponibles > 0 && wzComboIds(c); if (!ids) return;
+      var falta = ids.filter(function (x) { return !carrito[x]; });
+      if (falta.length !== 1 || ids.length - 1 < 1 || !sel.some(function (s) { return ids.indexOf(s.id) !== -1; })) return;
+      var ah = ids.reduce(function (s, x) { return s + precioItem(item(x)).u; }, 0) - precioItem(c).u;
+      if (ah > 0 && (!mejor || ah > mejor.ah)) mejor = { c: c, f: item(falta[0]), ah: ah };
+    });
+    if (mejor) h = '<div class="wzCombo sug">💡<div>Agrega <b>' + esc(mejor.f.plataforma) + '</b> y llévate el combo ' + esc(mejor.c.plataforma) + ' por ' + pesos(precioItem(mejor.c).u) + '</div><button class="pill" onclick="wzTocar(\'' + mejor.f.id + '\')">Ahorra ' + pesos(mejor.ah) + '</button></div>';
+  }
+  document.getElementById("wzCombos").innerHTML = h;
+}
+function wzPintar() {
+  var esRen = modo === "renovacion", r = resumen(), b = document.getElementById("btnEnviar");
+  if (esRen) WZ = 3;
+  ["wz1", "wz2", "wz3"].forEach(function (id, i) { document.getElementById(id).style.display = WZ === i + 1 ? "" : "none"; });
+  document.getElementById("wzSteps").style.display = esRen ? "none" : "";
+  document.getElementById("wzBack").style.display = !esRen && WZ > 1 ? "" : "none";
+  document.getElementById("resRen").style.display = esRen ? "" : "none";
+  [1, 2, 3].forEach(function (i) { document.getElementById("wzS" + i).className = "wzSt" + (i < WZ ? " ok" : i === WZ ? " on" : ""); });
+  document.getElementById("wzS1").innerHTML = "<i></i>" + (WZ > 1 ? "✓ Elige" : "1. Elige");
+  document.getElementById("wzS2").innerHTML = "<i></i>" + (WZ > 2 ? "✓ Datos" : "2. Tus datos");
+  document.getElementById("shTitulo").textContent = esRen ? "Renovar perfiles" : WZ === 3 ? "Paga" : WZ === 2 ? "Tus datos" : "Elige";
+  var tot = esRen ? renTotal().t : r.t;
+  document.getElementById("wzMini").innerHTML = !esRen && WZ === 1 ? '<span>' + (r.n ? r.n + (r.n === 1 ? " perfil" : " perfiles") + (r.f > r.t ? " · ahorras " + pesos(r.f - r.t) : "") : "Toca al menos una plataforma") + '</span><b>' + pesos(tot) + '</b>' : "";
+  document.getElementById("wzMini").style.display = !esRen && WZ === 1 ? "" : "none";
+  document.getElementById("wzLegal").style.display = WZ === 3 ? "" : "none";
+  if (WZ !== 3) document.getElementById("terms").style.display = "none";
+  if (!b.disabled || b.textContent.indexOf("Enviando") === -1) {
+    b.textContent = WZ === 3 ? "Enviar comprobante ✓" : WZ === 2 ? "Ir a pagar →" : "Continuar →";
+    b.className = "cta full" + (WZ === 3 ? " verde" : "");
+    b.disabled = !esRen && WZ === 1 && !r.n;
+  }
+  if (WZ === 1) pintarTiles();
+}
+function wzIr(n) {
+  WZ = n; error("");
+  wzPintar();
+  var sh = document.querySelector("#mCarrito .sheet"); if (sh) sh.scrollTop = 0;
+}
+function wzAtras() { if (WZ > 1) wzIr(WZ - 1); }
+function wzSig() {
+  error("");
+  if (modo === "renovacion" || WZ === 3) return enviar();
+  if (WZ === 1) { if (!resumen().n) return error("Toca al menos una plataforma."); return wzIr(2); }
+  var nombre = document.getElementById("nombre").value.trim();
+  var wa = document.getElementById("wa").value.replace(/\D/g, "");
+  if (wa.length === 12 && wa.indexOf("57") === 0) wa = wa.slice(2);
+  if (nombre.length < 2) return error("Escribe tu nombre.");
+  if (wa.length !== 10) return error("Escribe tu WhatsApp de 10 dígitos.");
+  guardarLocal("st25_cliente", Object.assign(leerLocal("st25_cliente", {}), { nombre: nombre, wa: wa }));
+  wzIr(3);
 }
 
 function leerArchivo(inp) {
@@ -1021,45 +1230,36 @@ function enviar() {
   if (!resumen().n) return error("Tu carrito está vacío.");
   if (nombre.length < 2) return error("Escribe tu nombre.");
   if (wa.length !== 10) return error("Escribe tu WhatsApp de 10 dígitos.");
-  var clave = document.getElementById("clave").value.replace(/\D/g, "");
-  if (clave && clave.length !== 6) return error("Tu código de acceso debe tener 6 números.");
   if (!comprobante) return error("Sube la captura de tu pago.");
-  if (!document.getElementById("acepto").checked) return error("Debes aceptar las condiciones.");
   var b = document.getElementById("btnEnviar"); b.disabled = true; b.textContent = "Enviando…";
   guardarLocal("st25_cliente", { nombre: nombre, wa: wa });
   var items = Object.keys(carrito).map(function (id) { return { id: id, cant: carrito[id] }; });
-  api("pedido", { nombre: nombre, contacto: wa, clave: clave, items: items, comprobante: comprobante, ref: refActual(), codigo: CODIGO ? CODIGO_TXT : "" }).then(function (r) {
+  api("pedido", { nombre: nombre, contacto: wa, items: items, comprobante: comprobante, ref: refActual(), codigo: CODIGO ? CODIGO_TXT : "" }).then(function (r) {
     if (!r || r.error) throw new Error((r && r.error) || "No se pudo enviar");
     guardarLocal("st25_ref", null);
     var mis = leerLocal("st25_pedidos", []);
-    mis.unshift({ id: r.id, token: r.token, total: r.total, fecha: Date.now() });
+    mis.unshift({ id: r.id, token: r.token, total: r.total, fecha: Date.now(), codigo: r.codigo || "", wa: wa });
     guardarLocal("st25_pedidos", mis.slice(0, 20));
-    carrito = {}; comprobante = null; CODIGO = null; CODIGO_TXT = ""; document.getElementById("pcode").value = ""; document.getElementById("pcmsg").textContent = "";
-    document.getElementById("drop").classList.remove("has");
-    document.getElementById("drop").innerHTML = "📎 Toca para subir la captura del pago<br><small>Imagen o PDF</small>";
-    document.getElementById("file").value = "";
-    document.getElementById("acepto").checked = false;
-    document.getElementById("clave").value = "";
+    carrito = {}; comprobante = null; CODIGO = null; CODIGO_TXT = "";     document.getElementById("pcode").value = ""; document.getElementById("pcmsg").textContent = "";
+    limpiarPago(); WZ = 1;
     pintarCarrito(); cerrar("mCarrito"); cargar();
     verPedido(r.id, r.token);
   }).catch(function (e) {
     error(e && e.message ? e.message : "No se pudo enviar el pedido. Intenta de nuevo.");
-  }).then(function () { b.disabled = false; b.textContent = "Enviar pedido"; });
+  }).then(function () { b.disabled = false; wzPintar(); });
 }
 
 function limpiarPago() {
   comprobante = null;
   document.getElementById("drop").classList.remove("has");
-  document.getElementById("drop").innerHTML = "📎 Toca para subir la captura del pago<br><small>Imagen o PDF</small>";
+  document.getElementById("drop").innerHTML = "📸 <b>Sube la captura del pago</b><br><small>Cuando hayas transferido, toca aquí</small>";
   document.getElementById("file").value = "";
-  document.getElementById("acepto").checked = false;
 }
 
 function enviarRenovacion() {
   var filas = REN ? REN.perfiles.filter(function (p) { return renSel[p.fila]; }).map(function (p) { return p.fila; }) : [];
   if (!filas.length) return error("Escoge al menos un perfil para renovar.");
   if (!comprobante && renTotal().t > 0) return error("Sube la captura de tu pago.");
-  if (!document.getElementById("acepto").checked) return error("Debes aceptar las condiciones.");
   var b = document.getElementById("btnEnviar"); b.disabled = true; b.textContent = "Enviando…";
   api("pedido", { tipo: "renovacion", contacto: REN.contacto, filas: filas, comprobante: comprobante }).then(function (r) {
     if (!r || r.error) throw new Error((r && r.error) || "No se pudo enviar");
@@ -1071,7 +1271,7 @@ function enviarRenovacion() {
     verPedido(r.id, r.token);
   }).catch(function (e) {
     error(e && e.message ? e.message : "No se pudo enviar. Intenta de nuevo.");
-  }).then(function () { b.disabled = false; b.textContent = "Enviar pedido"; });
+  }).then(function () { b.disabled = false; wzPintar(); });
 }
 
 function verPedido(id, token) {
@@ -1093,11 +1293,20 @@ function verPedido(id, token) {
   document.getElementById("btnMis").style.display = "";
 }
 
+function codigoCaja(id) {
+  var p = leerLocal("st25_pedidos", []).filter(function (x) { return x.id === id; })[0];
+  if (!p || !p.codigo) return "";
+  return '<div class="codBox">🔐 Tu código para «Consultar mi cuenta»<b>' + esc(p.codigo) + '</b><small style="color:var(--mut)">Guárdalo. Con tu WhatsApp y este código ves tus datos cuando quieras.</small></div>';
+}
 function pintarEstado(r) {
   var wa = CAT && CAT.whatsapp ? '<a class="wa" target="_blank" rel="noopener" href="https://wa.me/' + esc(CAT.whatsapp) + '?text=' + encodeURIComponent("Hola, tengo una pregunta sobre mi pedido " + r.id) + '">💬 Escribir por WhatsApp</a>' : "";
   var h = "";
   if (r.estado === "Pendiente") {
-    h = '<div class="status"><div class="spin"></div><b>Estamos verificando tu pago</b><p>' + esc(r.detalle) + ' · ' + pesos(r.total) + '</p><p>Puedes dejar esta página abierta: tus accesos aparecerán aquí apenas confirmemos. También los encuentras luego en “Mis pedidos”.</p>' + wa + '</div>';
+    h = '<div class="status"><div class="big">✅</div><b>¡Recibimos tu pedido!</b><p>Estamos revisando el pago. Normalmente toma unos minutos.</p></div>' +
+      '<div class="tline"><div><i class="d">✓</i><span>Pedido enviado<small>' + esc(r.detalle) + ' · ' + pesos(r.total) + '</small></span></div>' +
+      '<div><i>2</i><span>Revisamos el pago<small>Puedes dejar esta página abierta</small></span></div>' +
+      '<div><i>3</i><span>Recibes tus accesos<small>Aquí mismo y por WhatsApp</small></span></div></div>' +
+      codigoCaja(r.id) + '<div style="text-align:center">' + wa + '</div>';
   } else if (r.estado === "Entregado" || r.estado === "Parcial") {
     var bloques = String(r.accesos || "").split(/\n\s*\n/).filter(Boolean);
     h = (r.tipo === "renovacion"
@@ -1105,7 +1314,7 @@ function pintarEstado(r) {
       : '<div class="status"><div class="big">🎉</div><b>¡Pago confirmado!</b><p>Estos son tus accesos. Guárdalos en un lugar seguro.</p></div>') +
       bloques.map(function (b) { return '<div class="acc"><pre>' + esc(b) + '</pre><button class="copy" onclick="copiar(this.previousElementSibling.textContent)">Copiar datos</button></div>'; }).join("") +
       (r.estado === "Parcial" ? '<p class="order" style="margin-top:12px">Parte de tu pedido no tenía cupo; te escribiremos por WhatsApp para resolverlo.</p>' : "") +
-      (r.tipo === "renovacion" ? "" : '<p class="order" style="margin-top:12px">🔐 Para volver a ver estos datos entra a «Consultar mi cuenta» con tu WhatsApp y tu código de acceso.</p>') +
+      (r.tipo === "renovacion" ? "" : codigoCaja(r.id) || '<p class="order" style="margin-top:12px">🔐 Para volver a ver estos datos entra a «Consultar mi cuenta» con tu WhatsApp y tu código de acceso.</p>') +
       '<div style="text-align:center">' + wa + '</div>';
   } else {
     h = '<div class="status"><div class="big">😕</div><b>No pudimos confirmar tu pago</b><p>Escríbenos por WhatsApp con tu número de pedido y lo revisamos.</p>' + wa + '</div>';
