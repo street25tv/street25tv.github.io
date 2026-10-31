@@ -331,6 +331,7 @@ VISTAS.finanzas = function (mes) {
       finKpi("Renovaciones", pesos(k.renovaciones), null, k.nRenov + (k.nRenov === 1 ? " perfil" : " perfiles")) +
       finKpi("Ticket promedio", pesos(k.ticket), null, "por perfil cobrado") +
       '</div><div class="mut" style="margin:6px 2px 0">▲▼ ' + esc(cmp) + '</div>' +
+      '<div id="movBox"></div>' +
 
       '<h2 style="margin-top:22px">Próximos 30 días (si todos renuevan)</h2><div class="fgrid">' +
       finKpi("Ingreso recurrente", pesos(r.mrr), null, r.activos + " perfiles activos") +
@@ -359,10 +360,37 @@ VISTAS.finanzas = function (mes) {
       { marcar: f.mes, alClic: function (d) { CACHE.finMes = d.clave; VISTAS.finanzas(d.clave); } });
     barras("chDias", f.diario.map(function (d) { return { et: String(d.dia), clave: d.dia, v: [d.ingresos], extra: d }; }),
       [COL.ing], function (d) { return '<b>' + d.clave + ' de ' + esc(mesTxt(f.mes, true).split(" ")[0].toLowerCase()) + '</b><br>Ingresos ' + pesos(d.extra.ingresos) + (d.extra.costos ? '<br>Costos ' + pesos(d.extra.costos) : ''); },
-      { cadaEt: f.diario.length > 16 ? 5 : 1 });
-    renCargar(f.mes);
+      { cadaEt: f.diario.length > 16 ? 5 : 1, alClic: function (d) { movCargar(f.mes + "-" + ("0" + d.clave).slice(-2)); if ($("movBox")) $("movBox").scrollIntoView({ behavior: "smooth", block: "start" }); } });
+    renCargar(f.mes); movCargar(CACHE.movFecha || "");
   }).catch(fallo);
 };
+// Movimientos financieros de un día: lo que entró (pagos de clientes) y lo que salió (pagos a proveedores)
+function movCargar(fecha) {
+  var box = $("movBox"); if (!box) return;
+  box.innerHTML = '<h2 style="margin-top:22px">📒 Movimientos del día</h2><div class="load">Cargando movimientos…</div>';
+  api("adm_movimientos", { fecha: fecha || "" }).then(function (r) {
+    CACHE.movFecha = r.fecha;
+    var t = r.totales, dd = function (k) { var p = k.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; };
+    var mover = function (n) { var d = new Date(r.fecha + "T12:00:00"); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); };
+    var h = '<div class="row" style="margin-top:22px;gap:6px"><h2 style="margin:0">📒 Movimientos del día</h2><span class="sp"></span>' +
+      '<button class="btn sec sm" onclick="movCargar(\'' + mover(-1) + '\')">‹</button>' +
+      '<input class="in" type="date" style="width:auto" value="' + r.fecha + '" max="' + r.hoy + '" onchange="movCargar(this.value)">' +
+      (r.fecha < r.hoy ? '<button class="btn sec sm" onclick="movCargar(\'' + mover(1) + '\')">›</button>' : '') + '</div>' +
+      '<div class="mut" style="margin:4px 2px 10px">' + (r.fecha === r.hoy ? 'Hoy, ' : '') + dd(r.fecha) + ' · ' + t.ventas + ' venta(s) · ' + t.renovaciones + ' renovación(es) · ' + r.egresos.length + ' pago(s) a proveedores</div>' +
+      '<div class="fgrid">' + finKpi("Entró", pesos(t.ingresos), null, r.ingresos.length + " pago(s) de clientes") + finKpi("Salió", pesos(t.egresos), null, "proveedores") +
+      finKpi("Neto del día", pesosS(t.neto), null, t.neto < 0 ? "salió más de lo que entró" : "") + '</div>';
+    h += '<div class="card" style="margin-top:10px">' + (r.ingresos.length ? r.ingresos.map(function (x) {
+      return '<div class="mcli"><div class="tx"><b>' + esc(x.cliente || "Cliente") + '</b><div class="mut fs">' + esc(x.hora) + ' · ' + esc(x.tipo) + ' · ' + esc(x.plataforma) + (x.cp ? ' · ' + esc(x.cp) : '') + '</div></div><b style="color:var(--ok);white-space:nowrap">+' + pesos(x.monto) + '</b></div>';
+    }).join("") : '<div class="empty">Sin pagos de clientes este día</div>') + '</div>';
+    if (r.egresos.length) h += '<div class="card" style="margin-top:10px">' + r.egresos.map(function (x) {
+      return '<div class="mcli"><div class="tx"><b>' + esc(x.cuenta) + ' · ' + esc(x.plataforma) + '</b><div class="mut fs">' + esc(x.hora) + ' · ' + esc(x.tipo) + ' · ' + esc(x.proveedor || "proveedor") + (x.vence ? ' · nuevo vence ' + esc(x.vence) : '') + '</div></div><b style="color:var(--acc);white-space:nowrap">−' + pesos(x.monto) + '</b></div>';
+    }).join("") + '</div>';
+    h += '<div class="card" style="margin-top:10px;overflow-x:auto"><table class="tp"><tr><th>Día</th><th>Entró</th><th>Salió</th><th>Neto</th></tr>' + r.semana.slice().reverse().map(function (s) {
+      return '<tr style="cursor:pointer' + (s.fecha === r.fecha ? ';background:var(--bg2)' : '') + '" onclick="movCargar(\'' + s.fecha + '\')"><td>' + dd(s.fecha).slice(0, 5) + '</td><td>' + pesos(s.ingresos) + '</td><td>' + pesos(s.egresos) + '</td><td><b>' + pesosS(s.neto) + '</b></td></tr>';
+    }).join("") + '</table><div class="mut fs" style="margin-top:6px">Últimos 7 días · toca un día para ver su detalle. También puedes tocar una barra del gráfico de ingresos por día.</div></div>';
+    box.innerHTML = h;
+  }).catch(function (e) { box.innerHTML = '<div class="err">Movimientos: ' + esc(e.message) + '</div>'; });
+}
 function renCargar(mes) {
   api("adm_renovacion", { mes: mes }).then(function (r) {
     if (!$("renBox")) return;
