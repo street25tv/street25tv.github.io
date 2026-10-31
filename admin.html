@@ -1108,7 +1108,8 @@ function dinero(v) { if (typeof v === "number") return v; return Number(String(v
 function precioTxt(p) {
   var l = p.lista || p.precio, v = p.precio;
   return '<div class="ptx"><span>Valor del perfil <b>' + pesos(l) + '</b></span><span>Vendido a <b>' + pesos(v) + '</b>' +
-    (l > v ? ' <span class="pill warn">−' + Math.round((l - v) * 100 / l) + '% combo/desc.</span>' : '') + '</span></div>';
+    (l > v ? ' <span class="pill warn">−' + Math.round((l - v) * 100 / l) + '% ' + (p.combo ? 'combo' : 'desc.') + '</span>' : '') + '</span>' +
+    (p.combo ? '<span>🎁 Combo <b>' + esc(p.combo) + '</b></span>' : '') + '</div>';
 }
 function hoyISO(dias) { var d = new Date(); d.setDate(d.getDate() + (dias || 0)); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
 function volverCm() { return '<div class="row" style="margin-bottom:10px"><button class="btn sec sm" onclick="ir(\'cuentas\')">← Cuentas madre</button></div>'; }
