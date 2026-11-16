@@ -1475,6 +1475,7 @@ function cbPintar() {
       '<div class="ptx"><span>Precio <b>' + pesos(c.precio) + '</b></span>' + (c.suma ? '<span>Sueltos <s>' + pesos(c.suma) + '</s></span>' : '') +
       (c.ahorro > 0 ? '<span>Cliente ahorra <b>' + pesos(c.ahorro) + ' (' + c.pctAhorro + '%)</b></span>' : (c.suma ? '<span class="vend">no hay ahorro vs. sueltos</span>' : '')) +
       '<span>' + margenHtml(c.precio, c.costo) + '</span><span>' + (c.disponibles > 0 ? c.disponibles + ' disponibles' : '<span class="neg">sin stock</span>') + '</span></div>' +
+      (c.reparto ? '<div class="mut" style="margin-top:6px">Valor por plataforma: ' + c.incluye.map(function (n, k) { return esc(n) + ' <b>' + pesos(c.reparto[k]) + '</b>'; }).join(" · ") + '</div>' : '') +
       (c.costo !== null && c.precio < c.costo ? '<div class="pisow">⚠️ Este combo está por debajo de lo que te cuestan sus perfiles (' + pesos(c.costo) + ').</div>' : '') +
       '<div class="row" style="margin-top:10px"><button class="btn sec sm" onclick="cbForm(' + i + ')">✏️ Editar</button><button class="btn bad sm" onclick="cbEliminar(' + i + ',this)">🗑 Eliminar</button></div></div>';
   }).join("") : '<div class="empty">Aún no tienes combos. Crea el primero.</div>';
@@ -1484,21 +1485,53 @@ function cbForm(i) {
   var r = CACHE.cb, c = i === undefined ? null : r.combos[i];
   CACHE.cbEdit = c;
   var sel = {}; if (c) c.incluye.forEach(function (n) { sel[n] = 1; });
+  CACHE.cbRep = {}; CACHE.cbRepManual = !!(c && c.reparto);
+  if (c && c.reparto) c.incluye.forEach(function (n, k) { CACHE.cbRep[n] = c.reparto[k]; });
   $("cbForm").innerHTML = '<div class="card acc-form"><b>' + (c ? "Editar combo" : "Nuevo combo") + '</b>' +
     '<label class="f">Nombre</label><input class="in" id="cbNom" maxlength="60" placeholder="Ej.: Netflix + Disney" value="' + esc(c ? c.nombre : "") + '">' +
     '<label class="f">Plataformas (mínimo 2)</label><div class="plist">' + r.sueltos.map(function (s, j) {
-      return '<label class="gopt"><input type="checkbox" data-cb="' + j + '"' + (sel[s.nombre] ? " checked" : "") + ' onchange="cbCalc()"><span>' + esc(s.nombre) +
+      return '<label class="gopt"><input type="checkbox" data-cb="' + j + '"' + (sel[s.nombre] ? " checked" : "") + ' onchange="cbRepPintar()"><span>' + esc(s.nombre) +
         ' <span class="mut">· ' + pesos(s.precio) + ' · ' + s.disponibles + ' libres' + (s.activo ? '' : ' · oculto en la tienda') + '</span></span></label>';
     }).join("") + '</div>' +
-    '<label class="f">Precio final del combo (30 días)</label><input class="in" id="cbPre" inputmode="numeric" placeholder="Ej.: 25000" value="' + (c ? c.precio : "") + '" oninput="cbCalc()">' +
+    '<label class="f">Precio final del combo (30 días)</label><input class="in" id="cbPre" inputmode="numeric" placeholder="Ej.: 25000" value="' + (c ? c.precio : "") + '" oninput="cbPrecioIn()">' +
+    '<div id="cbRep"></div>' +
     '<div class="calc" id="cbCalc"></div>' +
     '<label class="f">Descripción (opcional)</label><input class="in" id="cbDes" maxlength="160" placeholder="Ej.: 2 perfiles propios, uno por plataforma" value="' + esc(c ? c.descripcion : "") + '">' +
     '<label class="gopt"><input type="checkbox" id="cbAct"' + (!c || c.activo ? " checked" : "") + '><span>Visible en la tienda</span></label>' +
     '<div class="err" id="cbErr"></div><div class="row" style="margin-top:12px"><button class="btn" id="cbBtn" onclick="cbGuardar()">' + (c ? "Guardar cambios" : "Crear combo") + '</button>' +
     '<button class="btn sec" onclick="$(\'cbForm\').innerHTML=\'\'">Cancelar</button></div></div>';
-  cbCalc();
+  cbRepPintar();
   $("cbForm").scrollIntoView({ behavior: "smooth", block: "start" });
 }
+// Valor de cada plataforma dentro del combo. Automático: proporcional al precio full (igual que el servidor). Manual: lo que escribas; el precio del combo es la suma.
+function cbAuto(sel, precio) {
+  var fulls = sel.map(function (x) { return x.full || x.precio || 0; }), suma = fulls.reduce(function (a, b) { return a + b; }, 0), resto = precio;
+  return fulls.map(function (f, i) {
+    if (i === fulls.length - 1) return resto;
+    var v = Math.round((suma ? precio * f / suma : precio / fulls.length) / 100) * 100; resto -= v; return v;
+  });
+}
+function cbRepPintar() {
+  var sel = cbSel(), precio = Number($("cbPre").value.replace(/\D/g, "")) || 0;
+  if (sel.length < 2) { $("cbRep").innerHTML = ""; cbCalc(); return; }
+  if (!CACHE.cbRepManual) { var a = cbAuto(sel, precio); sel.forEach(function (x, i) { CACHE.cbRep[x.nombre] = precio ? a[i] : ""; }); }
+  else sel.forEach(function (x) { if (CACHE.cbRep[x.nombre] === undefined || CACHE.cbRep[x.nombre] === "") CACHE.cbRep[x.nombre] = 0; });
+  $("cbRep").innerHTML = '<label class="f">Valor de cada plataforma en el combo</label>' +
+    '<div class="mut" style="margin:-2px 0 6px">Pon 0 en la que va de regalo. El precio del combo es la suma.' + (CACHE.cbRepManual ? ' <a href="#" onclick="CACHE.cbRepManual=false;cbRepPintar();return false">Repartir automático</a>' : '') + '</div>' +
+    sel.map(function (x) {
+      return '<div class="row" style="margin-bottom:6px"><span style="flex:1;min-width:0">' + esc(x.nombre) + ' <span class="mut fs">· suelto ' + pesos(x.precio) + '</span></span>' +
+        '<input class="in" style="width:120px;text-align:right" inputmode="numeric" data-rn="' + esc(x.nombre) + '" value="' + (CACHE.cbRep[x.nombre] === "" ? "" : CACHE.cbRep[x.nombre]) + '" placeholder="0" oninput="cbRepIn(this)"></div>';
+    }).join("");
+  cbCalc();
+}
+function cbRepIn(el) {
+  CACHE.cbRepManual = true;
+  CACHE.cbRep[el.getAttribute("data-rn")] = Number(el.value.replace(/\D/g, "")) || 0;
+  var tot = cbSel().reduce(function (s, x) { return s + (Number(CACHE.cbRep[x.nombre]) || 0); }, 0);
+  $("cbPre").value = tot || "";
+  cbCalc();
+}
+function cbPrecioIn() { CACHE.cbRepManual = false; cbRepPintar(); }
 function cbSel() { return [].filter.call(document.querySelectorAll("#cbForm input[data-cb]"), function (x) { return x.checked; }).map(function (x) { return CACHE.cb.sueltos[Number(x.getAttribute("data-cb"))]; }); }
 function cbCalc() {
   var sel = cbSel(), precio = Number($("cbPre").value.replace(/\D/g, "")) || 0;
@@ -1519,10 +1552,12 @@ function cbGuardar() {
   if (nom.length < 3) return err("Escribe el nombre del combo.");
   if (sel.length < 2) return err("Elige al menos 2 plataformas.");
   if (precio < 1000) return err("Escribe el precio del combo.");
+  var reparto = CACHE.cbRepManual ? sel.map(function (x) { return Number(CACHE.cbRep[x.nombre]) || 0; }) : [];
+  if (reparto.length && reparto.reduce(function (a, b) { return a + b; }, 0) !== precio) return err("Los valores por plataforma no suman el precio del combo.");
   var costo = sel.every(function (x) { return x.costo; }) ? sel.reduce(function (s, x) { return s + x.costo; }, 0) : 0;
   if (costo && precio < costo && !confirm("⚠️ Este combo queda por debajo del costo (" + pesos(costo) + ").\n¿Guardarlo de todas formas?")) return;
   var b = $("cbBtn"); b.disabled = true; b.textContent = "Guardando…";
-  api("adm_combo_guardar", { original: CACHE.cbEdit ? CACHE.cbEdit.nombre : "", nombre: nom, incluye: sel.map(function (x) { return x.nombre; }), precio: precio, descripcion: $("cbDes").value, activo: $("cbAct").checked })
+  api("adm_combo_guardar", { original: CACHE.cbEdit ? CACHE.cbEdit.nombre : "", nombre: nom, incluye: sel.map(function (x) { return x.nombre; }), precio: precio, reparto: reparto, descripcion: $("cbDes").value, activo: $("cbAct").checked })
     .then(function (r) { CACHE.cb = r; cbPintar(); toast("Combo guardado ✓"); })
     .catch(function (e) { b.disabled = false; b.textContent = "Guardar"; err(e.message); });
 }
